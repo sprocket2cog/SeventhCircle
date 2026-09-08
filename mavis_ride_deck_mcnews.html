@@ -22,7 +22,7 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .current{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{min-width:0}.temp{font-size:clamp(31px,10vw,52px);font-weight:900;line-height:1}.condition{font-size:clamp(11px,3vw,14px);margin-top:6px}.small{font-size:clamp(10px,2.7vw,12px);color:var(--muted);margin-top:3px}
 .forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1.3vw,8px)}.hour{min-width:0;text-align:center;border:1px solid var(--line);border-radius:10px;padding:clamp(7px,2vw,10px) 2px}.hour b{font-size:clamp(9px,2.7vw,12px)}.hour .icon{font-size:clamp(17px,5vw,24px);margin:4px 0}.hour strong{font-size:clamp(12px,3.5vw,16px);display:block}.hour small{font-size:clamp(8px,2.2vw,10px);color:var(--muted);display:block;margin-top:3px}
 button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--text);border-radius:10px;padding:10px;font-weight:400;font-size:14px}.error{text-align:center;color:var(--muted);font-size:11px;margin-top:5px}
-.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(8px,2.4vw,10px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(10px,2.8vw,12px)}@keyframes scroll{to{transform:translateX(-100%)}}
+.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(8px,2.4vw,10px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(10px,2.8vw,12px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}@keyframes scroll{to{transform:translateX(-100%)}}
 .tickerControls{display:flex;gap:4px;flex:0 0 auto;padding:0 8px}.tickerControls button{width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;line-height:1;font-weight:900}
 @media(min-width:700px){body{padding:15px}.page{border:1px solid var(--line);border-radius:20px;min-height:calc(100dvh - 30px)}}
 </style>
@@ -82,10 +82,27 @@ async function viaProxy(targetUrl){
  return r.json();
 }
 
+function escapeHtml(s){
+ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function setTickerItems(items){
+ // items: array of {title, link}
+ const track=$("ticker");
+ track.innerHTML=items.map(it=>
+  it.link
+   ? `<a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`
+   : escapeHtml(it.title)
+ ).join("  •  ")+"  •  ";
+ // restart the CSS scroll animation so full-length text scrolls cleanly
+ track.style.animation="none";
+ void track.offsetWidth;
+ track.style.animation="";
+}
+
 function setTicker(text){
  const track=$("ticker");
  track.textContent=text;
- // restart the CSS scroll animation so full-length text scrolls cleanly
  track.style.animation="none";
  void track.offsetWidth;
  track.style.animation="";
@@ -101,7 +118,7 @@ async function loadNews(){
  try{
   const j=await viaProxy("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(feedUrl));
   if(!j.items||!j.items.length)throw new Error("empty");
-  setTicker(j.items.slice(0,10).map(i=>i.title).join("  •  ")+"  •  ");
+  setTickerItems(j.items.slice(0,10).map(i=>({title:i.title,link:i.link})));
   return;
  }catch(e){attempts.push("rss2json: "+(e&&e.message?e.message:e))}
 
@@ -117,9 +134,12 @@ async function loadNews(){
    if(!r.ok)throw new Error("http-"+r.status);
    const text=await r.text();
    const xml=new DOMParser().parseFromString(text,"text/xml");
-   const titles=Array.from(xml.querySelectorAll("item > title")).map(t=>t.textContent.trim()).filter(Boolean);
-   if(!titles.length)throw new Error("empty");
-   setTicker(titles.slice(0,10).join("  •  ")+"  •  ");
+   const items=Array.from(xml.querySelectorAll("item")).map(item=>({
+    title:(item.querySelector("title")?.textContent||"").trim(),
+    link:(item.querySelector("link")?.textContent||"").trim()
+   })).filter(it=>it.title);
+   if(!items.length)throw new Error("empty");
+   setTickerItems(items.slice(0,10));
    return;
   }catch(e){attempts.push(name+": "+(e&&e.message?e.message:e))}
  }
