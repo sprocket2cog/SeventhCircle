@@ -8,7 +8,7 @@
 <style>
 :root{--bg:#07090c;--panel:#10141a;--panel2:#0c1015;--line:#252c34;--text:#f1f4f7;--muted:#89939f;--green:#39d353;--blue:#4da3ff;--amber:#ffb020;--red:#ff4545}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clamp(8px,2vw,16px) clamp(8px,2.5vw,18px) calc(52px + env(safe-area-inset-bottom))}
+body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clamp(8px,2vw,16px) clamp(8px,2.5vw,18px)}
 .header{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 8px}.brand{font-size:clamp(12px,3.5vw,16px);font-weight:900;letter-spacing:.16em}.clock{font-size:clamp(11px,3vw,14px);color:var(--muted);font-variant-numeric:tabular-nums}
 .card{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:clamp(12px,3vw,18px);padding:clamp(11px,3vw,16px);margin-bottom:clamp(7px,2vw,11px)}
 .status{display:grid;grid-template-columns:auto 1fr;gap:clamp(12px,4vw,20px);align-items:center;min-height:clamp(86px,22vw,125px)}
@@ -17,9 +17,7 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .sectiontitle{font-size:clamp(9px,2.5vw,11px);letter-spacing:.14em;font-weight:800;color:var(--muted);margin-bottom:8px}
 .current{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{min-width:0}.temp{font-size:clamp(31px,10vw,52px);font-weight:900;line-height:1}.condition{font-size:clamp(11px,3vw,14px);margin-top:6px}.small{font-size:clamp(10px,2.7vw,12px);color:var(--muted);margin-top:3px}
 .forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1.3vw,8px)}.hour{min-width:0;text-align:center;border:1px solid var(--line);border-radius:10px;padding:clamp(7px,2vw,10px) 2px}.hour b{font-size:clamp(9px,2.7vw,12px)}.hour .icon{font-size:clamp(17px,5vw,24px);margin:4px 0}.hour strong{font-size:clamp(12px,3.5vw,16px);display:block}.hour small{font-size:clamp(8px,2.2vw,10px);color:var(--muted);display:block;margin-top:3px}
-.fuel{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.fuelbox{border:1px solid var(--line);border-radius:10px;padding:9px 6px;text-align:center}.fueltype{font-size:10px;color:var(--muted);font-weight:800}.fuelprice{font-size:clamp(18px,5vw,25px);font-weight:900}.fueldist{font-size:10px;color:var(--muted)}
 button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--text);border-radius:10px;padding:10px;font-weight:800;font-size:12px}.error{text-align:center;color:#ff9b9b;font-size:10px;margin-top:5px}
-.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(8px,2.4vw,10px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll 36s linear infinite;font-size:clamp(10px,2.8vw,12px)}@keyframes scroll{to{transform:translateX(-100%)}}
 @media(min-width:700px){body{padding:15px}.page{border:1px solid var(--line);border-radius:20px;min-height:calc(100dvh - 30px)}}
 </style>
 <script>
@@ -54,20 +52,8 @@ window.addEventListener('error',function(e){
  <div class="forecast" id="forecast"></div>
 </section>
 
-<section class="card">
- <div class="sectiontitle">LOCAL FUEL</div>
- <div class="fuel">
-  <div class="fuelbox"><div class="fueltype">U91</div><div class="fuelprice" id="f91">--</div><div class="fueldist">nearby</div></div>
-  <div class="fuelbox"><div class="fueltype">U95</div><div class="fuelprice" id="f95">--</div><div class="fueldist">nearby</div></div>
-  <div class="fuelbox"><div class="fueltype">U98</div><div class="fuelprice" id="f98">--</div><div class="fueldist">nearby</div></div>
- </div>
- <a id="fuellink" href="https://www.google.com/maps/search/petrol+station" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:9px;padding:9px;border:1px solid var(--line);border-radius:10px;color:var(--text);text-decoration:none;font-size:12px;font-weight:800">📍 Find nearby fuel prices</a>
-</section>
-
-<button onclick="loadWeather();loadNews()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
+<button onclick="loadWeather()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
 </main>
-
-<div class="ticker"><div class="tag">🏍 NEWS</div><div class="tickerViewport"><div class="track" id="ticker">HONDA • YAMAHA • SUZUKI • ROYAL ENFIELD • TRIUMPH • KTM • BMW • APRILIA • MOTORCYCLE NEWS FEED • </div></div></div>
 
 <script>
 document.getElementById("reason").textContent="Script loaded — starting checks…";
@@ -81,61 +67,6 @@ async function viaProxy(targetUrl){
  if(!r.ok)throw new Error("http-"+r.status);
  return r.json();
 }
-
-function setTicker(text){
- const track=$("ticker");
- track.textContent=text;
- // restart the CSS scroll animation so full-length text scrolls cleanly
- track.style.animation="none";
- void track.offsetWidth;
- track.style.animation="";
-}
-
-async function fetchViaProxy(targetUrl){
- // allorigins' /raw endpoint fetches the URL server-side and returns it
- // with permissive CORS headers, sidestepping feeds/APIs that don't allow
- // direct browser cross-origin requests (e.g. reddit).
- const r=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(targetUrl));
- if(!r.ok)throw new Error("proxy-http-"+r.status);
- return r;
-}
-
-async function loadNewsViaRSS(){
- // Parse the motorcycle news RSS feed directly — no third-party JSON
- // conversion service to go down or rate-limit us.
- const r=await fetchViaProxy("https://www.motorcyclenews.com/rss/news/");
- const text=await r.text();
- const xml=new DOMParser().parseFromString(text,"text/xml");
- const titles=Array.from(xml.querySelectorAll("item > title")).map(t=>t.textContent.trim()).filter(Boolean);
- if(!titles.length)throw new Error("rss-empty");
- return titles.slice(0,10);
-}
-
-async function loadNewsViaReddit(){
- // Fallback: recent hot posts from r/motorcycles as headlines.
- const r=await fetchViaProxy("https://www.reddit.com/r/motorcycles/hot.json?limit=10");
- const j=await r.json();
- const posts=j?.data?.children||[];
- if(!posts.length)throw new Error("reddit-empty");
- return posts.map(p=>p.data.title);
-}
-
-async function loadNews(){
- let headlines;
- try{
-  headlines=await loadNewsViaRSS();
- }catch(e1){
-  try{
-   headlines=await loadNewsViaReddit();
-  }catch(e2){
-   setTicker("News error: "+(e1&&e1.message?e1.message:e1)+" / "+(e2&&e2.message?e2.message:e2)+" • ");
-   return;
-  }
- }
- setTicker(headlines.join("  •  ")+"  •  ");
-}
-loadNews();
-setInterval(loadNews,15*60*1000); // refresh headlines every 15 minutes
 
 async function getPositionViaBrowser(){
  return new Promise((resolve,reject)=>{
@@ -174,9 +105,6 @@ async function loadWeather(){
    return;
   }
  }
- // Update the fuel link with real coordinates as soon as we have them,
- // even if the weather fetch below fails.
- $("fuellink").href=`https://www.google.com/maps/search/petrol+station/@${pos.lat},${pos.lon},15z`;
  try{
   const lat=pos.lat,lon=pos.lon;
   const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&forecast_hours=8&timezone=auto`;
