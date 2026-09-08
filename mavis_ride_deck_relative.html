@@ -61,7 +61,7 @@ window.addEventListener('error',function(e){
   <div class="fuelbox"><div class="fueltype">U95</div><div class="fuelprice" id="f95">--</div><div class="fueldist">nearby</div></div>
   <div class="fuelbox"><div class="fueltype">U98</div><div class="fuelprice" id="f98">--</div><div class="fueldist">nearby</div></div>
  </div>
- <div class="small">Fuel feed placeholder. Connect an Australian fuel-price API for live prices.</div>
+ <a id="fuellink" href="https://www.google.com/maps/search/petrol+station" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:9px;padding:9px;border:1px solid var(--line);border-radius:10px;color:var(--text);text-decoration:none;font-size:12px;font-weight:800">📍 Find nearby fuel prices</a>
 </section>
 
 <button onclick="loadWeather();loadNews()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
@@ -91,17 +91,30 @@ function setTicker(text){
  track.style.animation="";
 }
 
-async function loadNewsViaRSS2JSON(){
- // Real motorcycle news headlines via an RSS feed, converted to JSON (no key needed).
- const feed=encodeURIComponent("https://www.motorcyclenews.com/rss/news/");
- const j=await viaProxy(`https://api.rss2json.com/v1/api.json?rss_url=${feed}`);
- if(!j.items||!j.items.length)throw new Error("rss2json-empty");
- return j.items.slice(0,10).map(i=>i.title);
+async function fetchViaProxy(targetUrl){
+ // allorigins' /raw endpoint fetches the URL server-side and returns it
+ // with permissive CORS headers, sidestepping feeds/APIs that don't allow
+ // direct browser cross-origin requests (e.g. reddit).
+ const r=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(targetUrl));
+ if(!r.ok)throw new Error("proxy-http-"+r.status);
+ return r;
+}
+
+async function loadNewsViaRSS(){
+ // Parse the motorcycle news RSS feed directly — no third-party JSON
+ // conversion service to go down or rate-limit us.
+ const r=await fetchViaProxy("https://www.motorcyclenews.com/rss/news/");
+ const text=await r.text();
+ const xml=new DOMParser().parseFromString(text,"text/xml");
+ const titles=Array.from(xml.querySelectorAll("item > title")).map(t=>t.textContent.trim()).filter(Boolean);
+ if(!titles.length)throw new Error("rss-empty");
+ return titles.slice(0,10);
 }
 
 async function loadNewsViaReddit(){
  // Fallback: recent hot posts from r/motorcycles as headlines.
- const j=await viaProxy("https://www.reddit.com/r/motorcycles/hot.json?limit=10");
+ const r=await fetchViaProxy("https://www.reddit.com/r/motorcycles/hot.json?limit=10");
+ const j=await r.json();
  const posts=j?.data?.children||[];
  if(!posts.length)throw new Error("reddit-empty");
  return posts.map(p=>p.data.title);
@@ -110,7 +123,7 @@ async function loadNewsViaReddit(){
 async function loadNews(){
  let headlines;
  try{
-  headlines=await loadNewsViaRSS2JSON();
+  headlines=await loadNewsViaRSS();
  }catch(e1){
   try{
    headlines=await loadNewsViaReddit();
@@ -161,6 +174,9 @@ async function loadWeather(){
    return;
   }
  }
+ // Update the fuel link with real coordinates as soon as we have them,
+ // even if the weather fetch below fails.
+ $("fuellink").href=`https://www.google.com/maps/search/petrol+station/@${pos.lat},${pos.lon},15z`;
  try{
   const lat=pos.lat,lon=pos.lon;
   const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&forecast_hours=8&timezone=auto`;
