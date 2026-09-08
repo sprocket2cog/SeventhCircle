@@ -18,10 +18,14 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .scanlines{position:fixed;inset:0;pointer-events:none;z-index:50;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.35) 100%),repeating-linear-gradient(to bottom,transparent 0,transparent 2px,var(--scan-color) 2px,var(--scan-color) 3px)}
 .rollScan{position:fixed;left:0;right:0;top:-4%;height:5px;pointer-events:none;z-index:60;background:linear-gradient(to bottom,transparent,var(--text) 50%,transparent);opacity:.55;mix-blend-mode:screen;filter:blur(.4px);animation:rollDown 5.85s linear infinite}
 @keyframes rollDown{0%{top:-4%}100%{top:104%}}
+.bootScreen{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+.bootText{font-size:clamp(22px,7.5vw,36px);color:var(--text);letter-spacing:.08em}
+.bootCursor{display:inline-block;width:.5em;height:1em;background:var(--text);margin-left:3px;vertical-align:-.14em;animation:bootBlink .5s steps(1) infinite}
+@keyframes bootBlink{50%{opacity:0}}
 .card{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:clamp(12px,3vw,18px);padding:clamp(11px,3vw,16px);margin-bottom:clamp(7px,2vw,11px)}
 .cardTight{padding:clamp(7px,1.8vw,10px);margin-bottom:clamp(5px,1.3vw,7px)}
 .status{display:grid;grid-template-columns:auto 1fr;gap:clamp(10px,3.2vw,16px);align-items:center;min-height:clamp(60px,15vw,84px)}
-.lamp{position:relative;overflow:hidden;width:clamp(40px,11vw,54px);aspect-ratio:1;border-radius:50%;background:var(--green);--glow-color:#39d353;--glow-min:14px;--glow-max:28px;--pulse-speed:3.2s;box-shadow:0 0 var(--glow-min) var(--glow-color);animation:pulseGlow var(--pulse-speed) ease-in-out infinite}
+.lamp{position:relative;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;width:clamp(40px,11vw,54px);aspect-ratio:1;border-radius:50%;background:var(--green);--glow-color:#39d353;--glow-min:14px;--glow-max:28px;--pulse-speed:3.2s;box-shadow:0 0 var(--glow-min) var(--glow-color);animation:pulseGlow var(--pulse-speed) ease-in-out infinite}
 .lampScan{position:absolute;inset:0;border-radius:50%;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.4) 2px,rgba(0,0,0,.4) 3px);opacity:.6}
 @keyframes pulseGlow{0%,100%{box-shadow:0 0 var(--glow-min) var(--glow-color)66}50%{box-shadow:0 0 var(--glow-max) var(--glow-color)}}
 .statusword{font-size:clamp(18px,5.5vw,28px);font-weight:950;letter-spacing:.1em;line-height:1}.reason{margin-top:4px;color:var(--muted);font-size:clamp(9px,2.5vw,12px);white-space:pre-line;line-height:1.35}
@@ -31,6 +35,7 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--text);border-radius:10px;padding:10px;font-weight:400;font-size:14px}.error{text-align:center;color:var(--muted);font-size:11px;margin-top:5px}
 .ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(8px,2.4vw,10px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(10px,2.8vw,12px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}@keyframes scroll{to{transform:translateX(-100%)}}
 .tickerControls{display:flex;gap:4px;flex:0 0 auto;padding:0 8px}.tickerControls button{width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;line-height:1;font-weight:900}
+.bootTarget{opacity:0}
 @media(min-width:700px){body{padding:15px}.page{border:1px solid var(--line);border-radius:20px;min-height:calc(100dvh - 30px)}}
 </style>
 <script>
@@ -44,17 +49,18 @@ window.addEventListener('error',function(e){
 </script>
 </head>
 <body>
+<div class="bootScreen" id="bootScreen"><div class="bootText"><span id="bootTyped"></span><span class="bootCursor"></span></div></div>
 <div class="scanlines"></div>
 <div class="rollScan"></div>
 <main class="page">
-<header class="header"><div class="headerLeft"><button class="schemeIcon" id="schemeBtn" onclick="cycleScheme()" aria-label="Cycle colour scheme"></button><div class="brand">MAVIS -SYSTEM ONLINE</div></div><div class="clock" id="clock">--:--</div></header>
+<header class="header bootTarget"><div class="headerLeft"><button class="schemeIcon" id="schemeBtn" onclick="cycleScheme()" aria-label="Cycle colour scheme"></button><div class="brand">MAVIS -SYSTEM ONLINE</div></div><div class="clock" id="clock">--:--</div></header>
 
-<section class="card cardTight status">
-  <div class="lamp" id="lamp"><div class="lampScan" id="lampScan"></div></div>
+<section class="card cardTight status bootTarget">
+  <div class="lamp" id="lamp" onclick="toggleAutoFollow()" role="button" aria-label="Toggle auto colour follow"><div class="lampScan" id="lampScan"></div></div>
   <div><div class="statusword" id="status">GREEN</div><div class="reason" id="reason">Checking local riding conditions…</div></div>
 </section>
 
-<section class="card cardTight">
+<section class="card cardTight bootTarget">
  <div class="sectiontitle">CURRENT WEATHER</div>
  <div class="current">
   <div class="metric"><div class="temp" id="temp">--°</div><div class="condition" id="condition">Loading…</div><div class="small" id="location">Locating…</div></div>
@@ -62,19 +68,75 @@ window.addEventListener('error',function(e){
  </div>
 </section>
 
-<section class="card">
+<section class="card bootTarget">
  <div class="sectiontitle">OUTLOOK</div>
  <div class="forecast" id="forecast"></div>
 </section>
 
-<button onclick="loadWeather();loadNews()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
+<button class="bootTarget" onclick="loadWeather();loadNews();replayBootFlicker()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
 </main>
 
-<div class="ticker"><div class="tag">🏍 MCNEWS</div><div class="tickerViewport"><div class="track" id="ticker">Loading MCNews headlines… • </div></div><div class="tickerControls"><button onclick="adjustTickerSpeed(-10)">+</button><button onclick="adjustTickerSpeed(10)">−</button></div></div>
+<div class="ticker bootTarget"><div class="tag">🏍 MCNEWS</div><div class="tickerViewport"><div class="track" id="ticker">Loading MCNews headlines… • </div></div><div class="tickerControls"><button onclick="adjustTickerSpeed(-10)">+</button><button onclick="adjustTickerSpeed(10)">−</button></div></div>
 
 <script>
 document.getElementById("reason").textContent="Script loaded — starting checks…";
 const $=id=>document.getElementById(id);
+
+// Boot sequence: type out "SYSTEM LOADING..." with a blinking block cursor,
+// then fade the boot screen and flicker each section on with a random,
+// staggered delay so the page feels like it's powering up piece by piece.
+const bootMsg="SYSTEM LOADING...";
+function typeBoot(i){
+ const el=$("bootTyped");
+ if(!el)return;
+ if(i<=bootMsg.length){
+  el.textContent=bootMsg.slice(0,i);
+  setTimeout(()=>typeBoot(i+1),88+Math.random()*88);
+ }else{
+  setTimeout(finishBoot,1200);
+ }
+}
+function finishBoot(){
+ const boot=$("bootScreen");
+ if(boot){
+  boot.style.transition="opacity .15s linear";
+  boot.style.opacity="0";
+  setTimeout(()=>boot.remove(),160);
+ }
+ revealContent();
+}
+function shuffle(arr){
+ for(let i=arr.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+ }
+ return arr;
+}
+function flickerReveal(el,baseDelay){
+ setTimeout(()=>{
+  const steps=[0.15,0.55,0.1,0.75,0.25,1];
+  let i=0;
+  (function step(){
+   if(i>=steps.length){el.style.opacity="1";return}
+   el.style.opacity=steps[i++];
+   setTimeout(step,56+Math.random()*144);
+  })();
+ },baseDelay);
+}
+function revealContent(){
+ const targets=shuffle(Array.from(document.querySelectorAll(".bootTarget")));
+ targets.forEach((el,i)=>{
+  flickerReveal(el,i*500+Math.random()*150);
+ });
+}
+function replayBootFlicker(){
+ // Re-run the flicker-in, in a freshly randomised order, without the
+ // full "SYSTEM LOADING" boot screen — used on every manual refresh.
+ document.querySelectorAll(".bootTarget").forEach(el=>{el.style.opacity="0"});
+ revealContent();
+}
+setTimeout(()=>typeBoot(0),200);
+
 const codes={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Rime fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Rain showers",81:"Rain showers",82:"Heavy showers",95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm"};
 const icons={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌦️",63:"🌧️",65:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",80:"🌦️",81:"🌧️",82:"🌧️",95:"⛈️",96:"⛈️",99:"⛈️"};
 function clock(){$("clock").textContent=new Intl.DateTimeFormat("en-AU",{hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())}setInterval(clock,1000);clock();
@@ -101,9 +163,34 @@ function applyScheme(i){
  root.setProperty("--line",s.line);
  root.setProperty("--scan-color",s.scan);
 }
+function flashNote(msg){
+ const el=$("error");
+ if(!el)return;
+ el.textContent=msg;
+ clearTimeout(flashNote._t);
+ flashNote._t=setTimeout(()=>{if(el.textContent===msg)el.textContent=""},2200);
+}
+// Auto-follow: by default the whole palette tracks the current ride-status
+// colour in real time (GREEN/AMBER/RED, with BLUE mapped to the cyan
+// scheme). Tapping the lamp toggles this. Tapping the scheme dot in the
+// header always switches to manual cycling and turns auto-follow off.
+let autoFollowStatus=true;
+let currentLevel="GREEN";
+const levelToSchemeIdx={GREEN:0,AMBER:1,RED:2,BLUE:3};
+function toggleAutoFollow(){
+ autoFollowStatus=!autoFollowStatus;
+ if(autoFollowStatus){
+  applyScheme(levelToSchemeIdx[currentLevel]??0);
+  flashNote("AUTO COLOUR: ON — FOLLOWING ALERT STATUS");
+ }else{
+  flashNote("AUTO COLOUR: OFF — MANUAL SCHEME");
+ }
+}
 function cycleScheme(){
+ autoFollowStatus=false;
  schemeIdx=(schemeIdx+1)%schemes.length;
  applyScheme(schemeIdx);
+ flashNote("MANUAL SCHEME SELECTED");
 }
 applyScheme(0);
 
@@ -277,6 +364,8 @@ async function loadWeather(){
   else if(temp>25){level="BLUE";reason="IT'S GOING TO BE WARM\nDRESS LIGHT, STAY COOL"}
   else if(temp<10){level="BLUE";reason="IT'S GOING TO BE COOL\nHEATED GEAR RECOMMENDED"}
   $("status").textContent=level;$("reason").textContent=reason;
+  currentLevel=level;
+  if(autoFollowStatus)applyScheme(levelToSchemeIdx[level]??0);
   const col={GREEN:"#39d353",BLUE:"#4da3ff",AMBER:"#ffb020",RED:"#ff4545"}[level];
   const pulse={GREEN:{min:"12px",max:"22px",speed:"3.4s"},BLUE:{min:"14px",max:"30px",speed:"2.6s"},AMBER:{min:"16px",max:"42px",speed:"1.5s"},RED:{min:"18px",max:"58px",speed:"0.8s"}}[level];
   $("lamp").style.background=col;
