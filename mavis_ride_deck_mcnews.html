@@ -16,6 +16,8 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .schemeIcon{position:relative;width:9px;height:9px;border-radius:50%;border:none;padding:0;flex:0 0 auto;background:var(--text);box-shadow:0 0 4px var(--text),0 0 8px var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .schemeIcon::before{content:"";position:absolute;inset:-5px;border-radius:50%;background:repeating-conic-gradient(var(--text) 0deg 2.5deg,transparent 2.5deg 22deg);opacity:.45;pointer-events:none}
 .scanlines{position:fixed;inset:0;pointer-events:none;z-index:50;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.35) 100%),repeating-linear-gradient(to bottom,transparent 0,transparent 2px,var(--scan-color) 2px,var(--scan-color) 3px)}
+.rollScan{position:fixed;left:0;right:0;top:-4%;height:5px;pointer-events:none;z-index:60;background:linear-gradient(to bottom,transparent,var(--text) 50%,transparent);opacity:.55;mix-blend-mode:screen;filter:blur(.4px);animation:rollDown 5.85s linear infinite}
+@keyframes rollDown{0%{top:-4%}100%{top:104%}}
 .card{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:clamp(12px,3vw,18px);padding:clamp(11px,3vw,16px);margin-bottom:clamp(7px,2vw,11px)}
 .cardTight{padding:clamp(7px,1.8vw,10px);margin-bottom:clamp(5px,1.3vw,7px)}
 .status{display:grid;grid-template-columns:auto 1fr;gap:clamp(10px,3.2vw,16px);align-items:center;min-height:clamp(60px,15vw,84px)}
@@ -43,6 +45,7 @@ window.addEventListener('error',function(e){
 </head>
 <body>
 <div class="scanlines"></div>
+<div class="rollScan"></div>
 <main class="page">
 <header class="header"><div class="headerLeft"><button class="schemeIcon" id="schemeBtn" onclick="cycleScheme()" aria-label="Cycle colour scheme"></button><div class="brand">MAVIS -SYSTEM ONLINE</div></div><div class="clock" id="clock">--:--</div></header>
 
