@@ -71,7 +71,7 @@ window.addEventListener('error',function(e){
 <section class="card cardTight bootTarget">
  <div class="sectiontitle">CURRENT WEATHER</div>
  <div class="current">
-  <div class="metric"><div class="temp" id="temp">--°</div><div class="condition" id="condition">Loading…</div><div class="small" id="location">Locating…</div></div>
+  <div class="metric"><div class="temp" id="temp">--°</div><div class="condition" id="condition">Loading…</div><div class="small" id="location">Locating…</div><div class="small" id="suburb"></div></div>
   <div class="metric"><div class="sectiontitle">WIND</div><div class="temp" id="wind">--</div><div class="small" id="gust">Gusts --</div><div class="small" id="rain">Rain --</div></div>
  </div>
 </section>
@@ -336,6 +336,16 @@ async function getPositionViaIP(){
  return {lat:j.latitude,lon:j.longitude,source:"approx (IP: "+(j.city||j.region||"unknown")+")"};
 }
 
+async function reverseGeocode(lat,lon){
+ // Best-effort suburb lookup — never blocks the rest of the page if it fails.
+ try{
+  const j=await viaProxy(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`);
+  const a=j.address||{};
+  const name=a.suburb||a.town||a.village||a.city||a.municipality||a.county||"";
+  if(name&&$("suburb"))$("suburb").textContent=name;
+ }catch(e){/* silent — suburb line just stays empty */}
+}
+
 async function loadWeather(){
  $("error").textContent="";
  $("location").textContent="Locating…";
@@ -364,6 +374,7 @@ async function loadWeather(){
   $("gust").textContent="Gusts "+Math.round(c.wind_gusts_10m)+" km/h";
   $("rain").textContent="Rain "+Math.round(c.precipitation_probability||0)+"%";
   $("location").textContent=`${pos.source} ${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+  reverseGeocode(lat,lon);
 
   let html="";
   for(let i=0;i<5&&i<d.hourly.time.length;i++){
