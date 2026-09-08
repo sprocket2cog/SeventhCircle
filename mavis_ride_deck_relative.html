@@ -124,11 +124,11 @@ async function loadWeather(){
   }
   $("forecast").innerHTML=html;
 
-  const rain=c.precipitation_probability||0,g=c.wind_gusts_10m||0,code=c.weather_code;
+  const rain=c.precipitation_probability||0,g=c.wind_gusts_10m||0,code=c.weather_code,temp=c.temperature_2m;
   let level="GREEN",reason="Conditions good for a ride.";
-  if(code>=95||g>=65||rain>=80){level="RED";reason="Severe weather, very strong gusts or heavy rain."}
-  else if(g>=45||rain>=60||[65,75,82].includes(code)){level="AMBER";reason="Conditions may make riding uncomfortable or hazardous."}
-  else if(c.temperature_2m<=5||code>=51){level="BLUE";reason="Cold or wet conditions. Check gear and road surface."}
+  if(code>=95||rain>=80||g>30||temp>35||temp<0){level="RED";reason="Severe: strong wind, extreme heat/cold, or storm — riding not advised."}
+  else if(rain>=60||[65,75,82].includes(code)||g>25||temp>30||temp<5){level="AMBER";reason="Uncomfortable or hazardous: check wind and temperature before riding."}
+  else if(temp<10||temp>25){level="BLUE";reason="Cool or hot conditions. Dress accordingly."}
   $("status").textContent=level;$("reason").textContent=reason;
   const col={GREEN:"#39d353",BLUE:"#4da3ff",AMBER:"#ffb020",RED:"#ff4545"}[level];
   $("lamp").style.background=col;$("lamp").style.boxShadow=`0 0 28px ${col}88`;
