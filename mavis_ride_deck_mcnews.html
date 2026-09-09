@@ -341,4 +341,206 @@ function glitchSlide(el){
   const anim=el.animate([
    {transform:"translateX(0)",filter:"none",easing:"cubic-bezier(.6,0,.85,.35)"},
    {transform:`translateX(${dir*off}px)`,filter:`opacity(.45) drop-shadow(${dir*off*0.55}px 0 0 red) drop-shadow(${-dir*off*0.55}px 0 0 cyan)`,easing:"cubic-bezier(.15,.65,.4,1)"},
-   {t
+   {transform:"translateX(0)",filter:"none"}
+  ],{duration});
+  anim.onfinish=resolve;
+ });
+}
+async function runGlitchPulse(){
+ const pool=document.querySelectorAll(".card, .brand, .alienBadge, button");
+ if(pool.length){
+  const el=pool[Math.floor(Math.random()*pool.length)];
+  if(Math.random()<0.3){
+   await glitchSlide(el);
+  }else{
+   const burst=Math.random()<0.4?2+Math.floor(Math.random()*3):1;
+   for(let i=0;i<burst;i++){
+    await glitchOnce(el);
+    if(i<burst-1)await new Promise(r=>setTimeout(r,35+Math.random()*70));
+   }
+  }
+ }
+ setTimeout(runGlitchPulse,1800+Math.random()*3400);
+}
+setTimeout(runGlitchPulse,2000+Math.random()*2000);
+
+function flickerTitle(){
+ const el=$("brandTitle");
+ if(el){
+  const r=Math.random();
+  if(r<0.24)el.style.opacity=(0.05+Math.random()*0.35).toFixed(2);
+  else if(r<0.32)el.style.opacity="0";
+  else el.style.opacity="1";
+ }
+ setTimeout(flickerTitle,20+Math.random()*180);
+}
+flickerTitle();
+
+async function viaProxy(targetUrl){
+ const r=await fetch(targetUrl);
+ if(!r.ok)throw new Error("http-"+r.status);
+ return r.json();
+}
+
+function escapeHtml(s){
+ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function setTickerItems(items){
+ // items: array of {title, link}
+ const track=$("ticker");
+ track.innerHTML=items.map(it=>
+  it.link
+   ? `<a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`
+   : escapeHtml(it.title)
+ ).join("  •  ")+"  •  ";
+ // restart the CSS scroll animation so full-length text scrolls cleanly
+ track.style.animation="none";
+ void track.offsetWidth;
+ track.style.animation="";
+}
+
+function setTicker(text){
+ const track=$("ticker");
+ track.textContent=text;
+ track.style.animation="none";
+ void track.offsetWidth;
+ track.style.animation="";
+}
+
+async function loadNews(){
+ const attempts=[];
+ const feedUrl="https://www.mcnews.com.au/feed/";
+
+ // Strategy 1: a dedicated RSS-to-JSON service. These tend to get through
+ // bot-protection (e.g. Cloudflare) better than a generic pass-through
+ // proxy, since they present as a legitimate feed reader.
+ try{
+  const j=await viaProxy("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(feedUrl));
+  if(!j.items||!j.items.length)throw new Error("empty");
+  setTickerItems(j.items.slice(0,10).map(i=>({title:i.title,link:i.link})));
+  return;
+ }catch(e){attempts.push("rss2json: "+(e&&e.message?e.message:e))}
+
+ // Strategy 2: raw CORS proxies, parsing the RSS XML ourselves.
+ const providers=[
+  ["allorigins",u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)],
+  ["corsproxy",u=>"https://corsproxy.io/?url="+encodeURIComponent(u)],
+  ["codetabs",u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)]
+ ];
+ for(const [name,build] of providers){
+  try{
+   const r=await fetch(build(feedUrl));
+   if(!r.ok)throw new Error("http-"+r.status);
+   const text=await r.text();
+   const xml=new DOMParser().parseFromString(text,"text/xml");
+   const items=Array.from(xml.querySelectorAll("item")).map(item=>({
+    title:(item.querySelector("title")?.textContent||"").trim(),
+    link:(item.querySelector("link")?.textContent||"").trim()
+   })).filter(it=>it.title);
+   if(!items.length)throw new Error("empty");
+   setTickerItems(items.slice(0,10));
+   return;
+  }catch(e){attempts.push(name+": "+(e&&e.message?e.message:e))}
+ }
+ setTicker("News error — "+attempts.join(" | ")+" • ");
+}
+loadNews();
+setInterval(loadNews,15*60*1000); // refresh headlines every 15 minutes
+
+async function getPositionViaBrowser(){
+ return new Promise((resolve,reject)=>{
+  if(!navigator.geolocation){reject(new Error("no-geo"));return}
+  navigator.geolocation.getCurrentPosition(
+   p=>resolve({lat:p.coords.latitude,lon:p.coords.longitude,source:"GPS"}),
+   err=>reject(err),
+   {enableHighAccuracy:false,timeout:15000,maximumAge:600000}
+  );
+ });
+}
+
+async function getPositionViaIP(){
+ // Fallback when browser geolocation is blocked, denied, or unavailable
+ // (common inside embedded/sandboxed views that don't grant the permission).
+ const j=await viaProxy("https://ipapi.co/json/");
+ if(j.latitude==null||j.longitude==null)throw new Error("ip-lookup-empty");
+ return {lat:j.latitude,lon:j.longitude,source:"approx (IP: "+(j.city||j.region||"unknown")+")"};
+}
+
+async function reverseGeocode(lat,lon){
+ // Best-effort suburb lookup — never blocks the rest of the page if it fails.
+ try{
+  const j=await viaProxy(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`);
+  const a=j.address||{};
+  const name=a.suburb||a.town||a.village||a.city||a.municipality||a.county||"";
+  if(name&&$("suburb"))$("suburb").textContent=name;
+ }catch(e){/* silent — suburb line just stays empty */}
+}
+
+async function loadWeather(){
+ $("error").textContent="";
+ $("location").textContent="Locating…";
+ let pos;
+ try{
+  pos=await getPositionViaBrowser();
+ }catch(err){
+  const reason=err && err.code===1 ? "Location permission denied — using approximate IP location instead."
+             : err && err.code===3 ? "Location timed out — using approximate IP location instead."
+             : "GPS unavailable ("+(err&&err.message?err.message:err)+") — using approximate IP location instead.";
+  $("error").textContent=reason;
+  try{
+   pos=await getPositionViaIP();
+  }catch(ipErr){
+   $("error").textContent="Couldn't determine location (GPS blocked and IP lookup failed). Check your browser's site permissions for this page and tap refresh.";
+   return;
+  }
+ }
+ try{
+  const lat=pos.lat,lon=pos.lon;
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&forecast_hours=8&timezone=auto`;
+  const d=await viaProxy(u),c=d.current;
+  $("temp").textContent=Math.round(c.temperature_2m)+"°";
+  $("condition").textContent=(icons[c.weather_code]||"•")+" "+(codes[c.weather_code]||"Unknown")+" • feels "+Math.round(c.apparent_temperature)+"°";
+  $("wind").textContent=Math.round(c.wind_speed_10m)+" km/h";
+  $("gust").textContent="Gusts "+Math.round(c.wind_gusts_10m)+" km/h";
+  $("rain").textContent="Rain "+Math.round(c.precipitation_probability||0)+"%";
+  $("location").textContent=`${pos.source} ${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+  reverseGeocode(lat,lon);
+
+  let html="";
+  for(let i=0;i<5&&i<d.hourly.time.length;i++){
+   const dt=new Date(d.hourly.time[i]);
+   const h=dt.getHours();
+   html+=`<div class="hour"><b>${String(h).padStart(2,"0")}:00</b><div class="icon">${icons[d.hourly.weather_code[i]]||"•"}</div><strong>${Math.round(d.hourly.temperature_2m[i])}°</strong><small>💨 ${Math.round(d.hourly.wind_speed_10m[i])}</small><small>G ${Math.round(d.hourly.wind_gusts_10m[i])}</small><small>🌧 ${d.hourly.precipitation_probability[i]}%</small></div>`;
+  }
+  $("forecast").innerHTML=html;
+
+  const rain=c.precipitation_probability||0,g=c.wind_gusts_10m||0,code=c.weather_code,temp=c.temperature_2m;
+  let level="GREEN",reason="CONDITIONS ARE PERFECT\nGET OUT THERE AND RIDE";
+  if(code>=95){level="RED";reason="SEVERE STORM ACTIVITY DETECTED\nDO NOT RIDE — SEEK SHELTER"}
+  else if(rain>=80){level="RED";reason="TORRENTIAL RAIN INCOMING\nRIDING NOT ADVISED"}
+  else if(g>30){level="RED";reason="DANGEROUS WIND GUSTS\nHOLD OFF UNTIL CONDITIONS EASE"}
+  else if(temp>35){level="RED";reason="EXTREME HEAT WARNING\nHIGH RISK OF FATIGUE — AVOID RIDING"}
+  else if(temp<0){level="RED";reason="SUB-ZERO CONDITIONS\nICE RISK — DO NOT RIDE"}
+  else if([65,75,82].includes(code)){level="AMBER";reason="IT'S RAINING HEAVILY\nWEAR YOUR RAINSUIT"}
+  else if(rain>=60){level="AMBER";reason="RAIN LIKELY SOON\nBRING YOUR WET WEATHER GEAR"}
+  else if(g>25){level="AMBER";reason="STRONG WINDS PICKING UP\nRIDE WITH CAUTION"}
+  else if(temp>30){level="AMBER";reason="IT'S GETTING HOT\nSTAY HYDRATED, WEAR LIGHT GEAR"}
+  else if(temp<5){level="AMBER";reason="COLD SNAP\nRUN ACTIVE CLIMATE CONTROL, LAYER UP"}
+  else if(temp>25){level="BLUE";reason="IT'S GOING TO BE WARM\nDRESS LIGHT, STAY COOL"}
+  else if(temp<10){level="BLUE";reason="IT'S GOING TO BE COOL\nHEATED GEAR RECOMMENDED"}
+  $("status").textContent=level;$("reason").textContent=reason;
+  currentLevel=level;
+  if(autoFollowStatus)applyScheme(levelToSchemeIdx[level]??0);
+  const col={GREEN:"#39d353",BLUE:"#4da3ff",AMBER:"#ffb020",RED:"#ff4545"}[level];
+  const pulse={GREEN:{min:"12px",max:"22px",speed:"3.4s"},BLUE:{min:"14px",max:"30px",speed:"2.6s"},AMBER:{min:"16px",max:"42px",speed:"1.5s"},RED:{min:"18px",max:"58px",speed:"0.8s"}}[level];
+  $("lamp").style.background=col;
+  $("lamp").style.setProperty("--glow-color",col);
+  $("lamp").style.setProperty("--glow-min",pulse.min);
+  $("lamp").style.setProperty("--glow-max",pulse.max);
+  $("lamp").style.setProperty("--pulse-speed",pulse.speed);
+ }catch(e){$("error").textContent="Weather error: "+(e&&e.message?e.message:e)}
+}
+loadWeather();
+</script>
+</body></html>
