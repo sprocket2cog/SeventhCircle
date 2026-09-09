@@ -23,6 +23,7 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .rollScan{position:fixed;left:0;right:0;top:-4%;height:5px;pointer-events:none;z-index:60;background:linear-gradient(to bottom,transparent,var(--text) 50%,transparent);opacity:.55;mix-blend-mode:screen;filter:blur(.4px);animation:rollDown 5.85s linear infinite}
 @keyframes rollDown{0%{top:-4%}100%{top:104%}}
 .bootScreen{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.bootStartBtn{background:#151b22;border:1px solid var(--text);color:var(--text);font-family:'VT323',monospace;font-size:clamp(16px,4.5vw,21px);letter-spacing:.08em;padding:14px 24px;border-radius:8px;cursor:pointer;box-shadow:0 0 16px var(--text)}
 .bootText{font-size:clamp(13px,4vw,18px);color:var(--text);letter-spacing:.04em;text-align:left;width:100%;max-width:540px}
 .bootLine{margin:5px 0;white-space:pre-wrap;word-break:break-word}
 .bootCursor{display:inline-block;width:.5em;height:1em;background:var(--text);margin-left:3px;vertical-align:-.14em;animation:bootBlink .5s steps(1) infinite}
@@ -58,7 +59,7 @@ window.addEventListener('error',function(e){
 </script>
 </head>
 <body>
-<div class="bootScreen" id="bootScreen"><div class="bootText" id="bootTextContainer"></div></div>
+<div class="bootScreen" id="bootScreen"><div id="bootPrompt"><button class="bootStartBtn" onclick="startBoot()">▶ START BOOT SEQUENCE</button></div><div class="bootText" id="bootTextContainer" style="display:none"></div></div>
 <audio id="bootSound" preload="auto" src="https://raw.githubusercontent.com/sprocket2cog/SeventhCircle/a5ab4259e1f04ce14897b68d0fb01c6ab99ca56f/beeps1.wav"></audio>
 <div class="scanlines"></div>
 <div class="rollScan"></div>
@@ -161,16 +162,23 @@ function typeLine(text,container){
   })();
  });
 }
-async function runBootSequence(){
- const container=$("bootTextContainer");
- if(!container)return;
+function startBoot(){
+ // This click is a genuine user gesture, so audio is guaranteed to be
+ // allowed to play here — no browser autoplay policy can block it.
  const sound=$("bootSound");
  if(sound){
   sound.currentTime=0;
-  setTimeout(()=>{
-   sound.play().catch(()=>{/* autoplay blocked until the user interacts once — harmless */});
-  },1000);
+  sound.play().catch(()=>{});
  }
+ const prompt=$("bootPrompt");
+ if(prompt)prompt.remove();
+ const container=$("bootTextContainer");
+ if(container)container.style.display="block";
+ runBootSequence();
+}
+async function runBootSequence(){
+ const container=$("bootTextContainer");
+ if(!container)return;
  const lines=pickBootLines();
  for(const line of lines){
   await typeLine(line,container);
@@ -217,7 +225,6 @@ function replayBootFlicker(){
  document.querySelectorAll(".bootTarget").forEach(el=>{el.style.opacity="0"});
  revealContent();
 }
-setTimeout(runBootSequence,300);
 
 const codes={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Rime fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Rain showers",81:"Rain showers",82:"Heavy showers",95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm"};
 const icons={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌦️",63:"🌧️",65:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",80:"🌦️",81:"🌧️",82:"🌧️",95:"⛈️",96:"⛈️",99:"⛈️"};
