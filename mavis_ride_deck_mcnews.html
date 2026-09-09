@@ -16,12 +16,12 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .schemeIcon{justify-self:center}
 .clock{justify-self:end}
 @keyframes spinY{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
-.clock{font-size:clamp(13px,3.2vw,16px);color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.clock{font-size:clamp(18px,4.5vw,22px);color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
 .schemeIcon{position:relative;width:9px;height:9px;border-radius:50%;border:none;padding:0;flex:0 0 auto;background:var(--text);box-shadow:0 0 4px var(--text),0 0 8px var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
 .schemeIcon::before{content:"";position:absolute;inset:-5px;border-radius:50%;background:repeating-conic-gradient(var(--text) 0deg 2.5deg,transparent 2.5deg 22deg);opacity:.45;pointer-events:none}
 .scanlines{position:fixed;inset:0;pointer-events:none;z-index:50;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.35) 100%),repeating-linear-gradient(to bottom,transparent 0,transparent 2px,var(--scan-color) 2px,var(--scan-color) 3px)}
-.rollScan{position:fixed;left:0;right:0;top:-4%;height:5px;pointer-events:none;z-index:60;background:linear-gradient(to bottom,transparent,var(--text) 50%,transparent);opacity:.55;mix-blend-mode:screen;filter:blur(.4px);animation:rollDown 5.85s linear infinite}
-@keyframes rollDown{0%{top:-4%}100%{top:104%}}
+.rollScan{position:fixed;left:0;right:0;top:-6%;height:14px;pointer-events:none;z-index:60;background:linear-gradient(to bottom,transparent,rgba(255,60,60,.5) 30%,rgba(255,255,255,.85) 50%,rgba(70,220,255,.5) 70%,transparent);opacity:.65;mix-blend-mode:screen;filter:blur(1.5px);animation:rollDown 5.85s linear infinite}
+@keyframes rollDown{0%{top:-6%}100%{top:106%}}
 .bootScreen{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
 .bootStartBtn{background:#151b22;border:1px solid var(--text);color:var(--text);font-family:'VT323',monospace;font-size:clamp(16px,4.5vw,21px);letter-spacing:.08em;padding:14px 24px;border-radius:8px;cursor:pointer;box-shadow:0 0 16px var(--text)}
 .bootText{font-size:clamp(13px,4vw,18px);color:var(--text);letter-spacing:.04em;text-align:left;width:100%;max-width:540px}
@@ -34,12 +34,12 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .lamp{position:relative;overflow:hidden;cursor:pointer;-webkit-tap-highlight-color:transparent;width:clamp(40px,11vw,54px);aspect-ratio:1;border-radius:50%;background:var(--green);--glow-color:#39d353;--glow-min:14px;--glow-max:28px;--pulse-speed:3.2s;box-shadow:0 0 var(--glow-min) var(--glow-color);animation:pulseGlow var(--pulse-speed) ease-in-out infinite}
 .lampScan{position:absolute;inset:0;border-radius:50%;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,.4) 2px,rgba(0,0,0,.4) 3px);opacity:.6}
 @keyframes pulseGlow{0%,100%{box-shadow:0 0 var(--glow-min) var(--glow-color)66}50%{box-shadow:0 0 var(--glow-max) var(--glow-color)}}
-.statusword{font-size:clamp(18px,5.5vw,28px);font-weight:950;letter-spacing:.1em;line-height:1}.reason{margin-top:4px;color:var(--muted);font-size:clamp(9px,2.5vw,12px);white-space:pre-line;line-height:1.35}
-.sectiontitle{font-size:clamp(9px,2.5vw,11px);letter-spacing:.14em;font-weight:800;color:var(--muted);margin-bottom:6px}
-.current{display:grid;grid-template-columns:1fr 1fr;gap:6px}.metric{min-width:0}.temp{font-size:clamp(26px,8.5vw,42px);font-weight:900;line-height:1}.condition{font-size:clamp(10px,2.8vw,13px);margin-top:4px}.small{font-size:clamp(9px,2.5vw,11px);color:var(--muted);margin-top:2px}
-.forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1.3vw,8px)}.hour{min-width:0;text-align:center;border:1px solid var(--line);border-radius:10px;padding:clamp(7px,2vw,10px) 2px}.hour b{font-size:clamp(9px,2.7vw,12px)}.hour .icon{font-size:clamp(17px,5vw,24px);margin:4px 0}.hour strong{font-size:clamp(12px,3.5vw,16px);display:block}.hour small{font-size:clamp(8px,2.2vw,10px);color:var(--muted);display:block;margin-top:3px}
+.statusword{font-size:clamp(18px,5.5vw,28px);font-weight:950;letter-spacing:.1em;line-height:1}.reason{margin-top:4px;color:var(--muted);font-size:clamp(13px,3.5vw,17px);white-space:pre-line;line-height:1.35}
+.sectiontitle{font-size:clamp(13px,3.5vw,15px);letter-spacing:.14em;font-weight:800;color:var(--muted);margin-bottom:6px}
+.current{display:grid;grid-template-columns:1fr 1fr;gap:6px}.metric{min-width:0}.temp{font-size:clamp(26px,8.5vw,42px);font-weight:900;line-height:1}.condition{font-size:clamp(14px,3.9vw,18px);margin-top:4px}.small{font-size:clamp(13px,3.5vw,15px);color:var(--muted);margin-top:2px}
+.forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1.3vw,8px)}.hour{min-width:0;text-align:center;border:1px solid var(--line);border-radius:10px;padding:clamp(7px,2vw,10px) 2px}.hour b{font-size:clamp(13px,3.8vw,17px)}.hour .icon{font-size:clamp(17px,5vw,24px);margin:4px 0}.hour strong{font-size:clamp(12px,3.5vw,16px);display:block}.hour small{font-size:clamp(11px,3.1vw,14px);color:var(--muted);display:block;margin-top:3px}
 button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--text);border-radius:10px;padding:10px;font-weight:400;font-size:14px}.error{text-align:center;color:var(--muted);font-size:11px;margin-top:5px}
-.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(8px,2.4vw,10px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(10px,2.8vw,12px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}@keyframes scroll{to{transform:translateX(-100%)}}
+.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(11px,3.4vw,14px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(14px,3.9vw,17px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}@keyframes scroll{to{transform:translateX(-100%)}}
 .tickerControls{display:flex;gap:4px;flex:0 0 auto;padding:0 8px}.tickerControls button{width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;line-height:1;font-weight:900}
 .bootTarget{opacity:0}
 .alienLogo{display:flex;justify-content:center;align-items:center;padding:16px 0 4px}
@@ -59,7 +59,7 @@ window.addEventListener('error',function(e){
 </script>
 </head>
 <body>
-<div class="bootScreen" id="bootScreen"><div id="bootPrompt"><button class="bootStartBtn" onclick="startBoot()">START SEQ</button></div><div class="bootText" id="bootTextContainer" style="display:none"></div></div>
+<div class="bootScreen" id="bootScreen"><div id="bootPrompt"><button class="bootStartBtn" onclick="startBoot()">▶ START BOOT SEQUENCE</button></div><div class="bootText" id="bootTextContainer" style="display:none"></div></div>
 <audio id="bootSound" preload="auto" src="https://raw.githubusercontent.com/sprocket2cog/SeventhCircle/a5ab4259e1f04ce14897b68d0fb01c6ab99ca56f/beeps1.wav"></audio>
 <div class="scanlines"></div>
 <div class="rollScan"></div>
@@ -102,13 +102,11 @@ const $=id=>document.getElementById(id);
 // a real boot log, then fade the boot screen and flicker each dashboard
 // section on with a random, staggered delay.
 const bootPool=[
- "ATMOSPHERIC ARRAY ONLINE",
- "SYSTEMS CHECK",
- "LOCAL SENSOR HANDSHAKE ACCEPTED",
- "MCNEWS UPLINK ESTABLISHED",
- "MAVIS INTERFACE NOMINAL",
- "PARSING EXTRA DATA",
- "RIDE LOGIC CALIBRATING"
+ "ATMOSPHERIC ARRAY ........ ONLINE",
+ "LOCAL SENSOR HANDSHAKE ... ACCEPTED",
+ "MCNEWS UPLINK ............ ESTABLISHED",
+ "MAVIS INTERFACE .......... NOMINAL",
+ "RIDE LOGIC ............... CALIBRATING"
 ];
 const gagPool=[
  "FUCK IT - GREEN!",
@@ -315,183 +313,32 @@ function flickerLamp(){
 }
 flickerLamp();
 
-function flickerTitle(){
- const el=$("brandTitle");
- if(el){
-  const r=Math.random();
-  if(r<0.24)el.style.opacity=(0.05+Math.random()*0.35).toFixed(2);
-  else if(r<0.32)el.style.opacity="0";
-  else el.style.opacity="1";
- }
- setTimeout(flickerTitle,20+Math.random()*180);
-}
-flickerTitle();
-
-async function viaProxy(targetUrl){
- const r=await fetch(targetUrl);
- if(!r.ok)throw new Error("http-"+r.status);
- return r.json();
-}
-
-function escapeHtml(s){
- return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-function setTickerItems(items){
- // items: array of {title, link}
- const track=$("ticker");
- track.innerHTML=items.map(it=>
-  it.link
-   ? `<a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`
-   : escapeHtml(it.title)
- ).join("  •  ")+"  •  ";
- // restart the CSS scroll animation so full-length text scrolls cleanly
- track.style.animation="none";
- void track.offsetWidth;
- track.style.animation="";
-}
-
-function setTicker(text){
- const track=$("ticker");
- track.textContent=text;
- track.style.animation="none";
- void track.offsetWidth;
- track.style.animation="";
-}
-
-async function loadNews(){
- const attempts=[];
- const feedUrl="https://www.mcnews.com.au/feed/";
-
- // Strategy 1: a dedicated RSS-to-JSON service. These tend to get through
- // bot-protection (e.g. Cloudflare) better than a generic pass-through
- // proxy, since they present as a legitimate feed reader.
- try{
-  const j=await viaProxy("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(feedUrl));
-  if(!j.items||!j.items.length)throw new Error("empty");
-  setTickerItems(j.items.slice(0,10).map(i=>({title:i.title,link:i.link})));
-  return;
- }catch(e){attempts.push("rss2json: "+(e&&e.message?e.message:e))}
-
- // Strategy 2: raw CORS proxies, parsing the RSS XML ourselves.
- const providers=[
-  ["allorigins",u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)],
-  ["corsproxy",u=>"https://corsproxy.io/?url="+encodeURIComponent(u)],
-  ["codetabs",u=>"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)]
- ];
- for(const [name,build] of providers){
-  try{
-   const r=await fetch(build(feedUrl));
-   if(!r.ok)throw new Error("http-"+r.status);
-   const text=await r.text();
-   const xml=new DOMParser().parseFromString(text,"text/xml");
-   const items=Array.from(xml.querySelectorAll("item")).map(item=>({
-    title:(item.querySelector("title")?.textContent||"").trim(),
-    link:(item.querySelector("link")?.textContent||"").trim()
-   })).filter(it=>it.title);
-   if(!items.length)throw new Error("empty");
-   setTickerItems(items.slice(0,10));
-   return;
-  }catch(e){attempts.push(name+": "+(e&&e.message?e.message:e))}
- }
- setTicker("News error — "+attempts.join(" | ")+" • ");
-}
-loadNews();
-setInterval(loadNews,15*60*1000); // refresh headlines every 15 minutes
-
-async function getPositionViaBrowser(){
- return new Promise((resolve,reject)=>{
-  if(!navigator.geolocation){reject(new Error("no-geo"));return}
-  navigator.geolocation.getCurrentPosition(
-   p=>resolve({lat:p.coords.latitude,lon:p.coords.longitude,source:"GPS"}),
-   err=>reject(err),
-   {enableHighAccuracy:false,timeout:15000,maximumAge:600000}
-  );
+// Occasional RGB-split glitch pulse — hits exactly one random element at a
+// time. drop-shadow duplicates the WHOLE rendered element (box, border,
+// background, icons, text — everything) as offset colour silhouettes,
+// not just the text glyphs. Separation amount is randomized per pulse,
+// and sometimes it fires a rapid burst of 2-4 pulses a few ms apart.
+function glitchOnce(el){
+ return new Promise(resolve=>{
+  const off=6+Math.random()*14;
+  const anim=el.animate([
+   {transform:"translateX(0)",filter:"none"},
+   {transform:`translateX(${-off}px)`,filter:`opacity(.5) drop-shadow(${-off}px 0 0 red) drop-shadow(${off}px 0 0 cyan)`},
+   {transform:`translateX(${off*0.55}px)`,filter:`opacity(.55) drop-shadow(${off*0.55}px 0 0 red) drop-shadow(${-off*0.55}px 0 0 cyan)`},
+   {transform:`translateX(${-off*0.3}px)`,filter:`opacity(.7) drop-shadow(${-off*0.3}px 0 0 red) drop-shadow(${off*0.3}px 0 0 cyan)`},
+   {transform:"translateX(0)",filter:"none"}
+  ],{duration:260+Math.random()*160,easing:"steps(4)"});
+  anim.onfinish=resolve;
  });
 }
-
-async function getPositionViaIP(){
- // Fallback when browser geolocation is blocked, denied, or unavailable
- // (common inside embedded/sandboxed views that don't grant the permission).
- const j=await viaProxy("https://ipapi.co/json/");
- if(j.latitude==null||j.longitude==null)throw new Error("ip-lookup-empty");
- return {lat:j.latitude,lon:j.longitude,source:"approx (IP: "+(j.city||j.region||"unknown")+")"};
-}
-
-async function reverseGeocode(lat,lon){
- // Best-effort suburb lookup — never blocks the rest of the page if it fails.
- try{
-  const j=await viaProxy(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&addressdetails=1`);
-  const a=j.address||{};
-  const name=a.suburb||a.town||a.village||a.city||a.municipality||a.county||"";
-  if(name&&$("suburb"))$("suburb").textContent=name;
- }catch(e){/* silent — suburb line just stays empty */}
-}
-
-async function loadWeather(){
- $("error").textContent="";
- $("location").textContent="Locating…";
- let pos;
- try{
-  pos=await getPositionViaBrowser();
- }catch(err){
-  const reason=err && err.code===1 ? "Location permission denied — using approximate IP location instead."
-             : err && err.code===3 ? "Location timed out — using approximate IP location instead."
-             : "GPS unavailable ("+(err&&err.message?err.message:err)+") — using approximate IP location instead.";
-  $("error").textContent=reason;
-  try{
-   pos=await getPositionViaIP();
-  }catch(ipErr){
-   $("error").textContent="Couldn't determine location (GPS blocked and IP lookup failed). Check your browser's site permissions for this page and tap refresh.";
-   return;
-  }
- }
- try{
-  const lat=pos.lat,lon=pos.lon;
-  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&forecast_hours=8&timezone=auto`;
-  const d=await viaProxy(u),c=d.current;
-  $("temp").textContent=Math.round(c.temperature_2m)+"°";
-  $("condition").textContent=(icons[c.weather_code]||"•")+" "+(codes[c.weather_code]||"Unknown")+" • feels "+Math.round(c.apparent_temperature)+"°";
-  $("wind").textContent=Math.round(c.wind_speed_10m)+" km/h";
-  $("gust").textContent="Gusts "+Math.round(c.wind_gusts_10m)+" km/h";
-  $("rain").textContent="Rain "+Math.round(c.precipitation_probability||0)+"%";
-  $("location").textContent=`${pos.source} ${lat.toFixed(2)}, ${lon.toFixed(2)}`;
-  reverseGeocode(lat,lon);
-
-  let html="";
-  for(let i=0;i<5&&i<d.hourly.time.length;i++){
-   const dt=new Date(d.hourly.time[i]);
-   const h=dt.getHours();
-   html+=`<div class="hour"><b>${String(h).padStart(2,"0")}:00</b><div class="icon">${icons[d.hourly.weather_code[i]]||"•"}</div><strong>${Math.round(d.hourly.temperature_2m[i])}°</strong><small>💨 ${Math.round(d.hourly.wind_speed_10m[i])}</small><small>G ${Math.round(d.hourly.wind_gusts_10m[i])}</small><small>🌧 ${d.hourly.precipitation_probability[i]}%</small></div>`;
-  }
-  $("forecast").innerHTML=html;
-
-  const rain=c.precipitation_probability||0,g=c.wind_gusts_10m||0,code=c.weather_code,temp=c.temperature_2m;
-  let level="GREEN",reason="CONDITIONS ARE PERFECT\nGET OUT THERE AND RIDE";
-  if(code>=95){level="RED";reason="SEVERE STORM ACTIVITY DETECTED\nDO NOT RIDE — SEEK SHELTER"}
-  else if(rain>=80){level="RED";reason="TORRENTIAL RAIN INCOMING\nRIDING NOT ADVISED"}
-  else if(g>30){level="RED";reason="DANGEROUS WIND GUSTS\nHOLD OFF UNTIL CONDITIONS EASE"}
-  else if(temp>35){level="RED";reason="EXTREME HEAT WARNING\nHIGH RISK OF FATIGUE — AVOID RIDING"}
-  else if(temp<0){level="RED";reason="SUB-ZERO CONDITIONS\nICE RISK — DO NOT RIDE"}
-  else if([65,75,82].includes(code)){level="AMBER";reason="IT'S RAINING HEAVILY\nWEAR YOUR RAINSUIT"}
-  else if(rain>=60){level="AMBER";reason="RAIN LIKELY SOON\nBRING YOUR WET WEATHER GEAR"}
-  else if(g>25){level="AMBER";reason="STRONG WINDS PICKING UP\nRIDE WITH CAUTION"}
-  else if(temp>30){level="AMBER";reason="IT'S GETTING HOT\nSTAY HYDRATED, WEAR LIGHT GEAR"}
-  else if(temp<5){level="AMBER";reason="COLD SNAP\nRUN ACTIVE CLIMATE CONTROL, LAYER UP"}
-  else if(temp>25){level="BLUE";reason="IT'S GOING TO BE WARM\nDRESS LIGHT, STAY COOL"}
-  else if(temp<10){level="BLUE";reason="IT'S GOING TO BE COOL\nHEATED GEAR RECOMMENDED"}
-  $("status").textContent=level;$("reason").textContent=reason;
-  currentLevel=level;
-  if(autoFollowStatus)applyScheme(levelToSchemeIdx[level]??0);
-  const col={GREEN:"#39d353",BLUE:"#4da3ff",AMBER:"#ffb020",RED:"#ff4545"}[level];
-  const pulse={GREEN:{min:"12px",max:"22px",speed:"3.4s"},BLUE:{min:"14px",max:"30px",speed:"2.6s"},AMBER:{min:"16px",max:"42px",speed:"1.5s"},RED:{min:"18px",max:"58px",speed:"0.8s"}}[level];
-  $("lamp").style.background=col;
-  $("lamp").style.setProperty("--glow-color",col);
-  $("lamp").style.setProperty("--glow-min",pulse.min);
-  $("lamp").style.setProperty("--glow-max",pulse.max);
-  $("lamp").style.setProperty("--pulse-speed",pulse.speed);
- }catch(e){$("error").textContent="Weather error: "+(e&&e.message?e.message:e)}
-}
-loadWeather();
-</script>
-</body></html>
+function glitchSlide(el){
+ // A slower directional smear-and-return, with an asymmetric ramp (fast
+ // away from center, easing back in) rather than constant speed.
+ return new Promise(resolve=>{
+  const off=16+Math.random()*26;
+  const dir=Math.random()<0.5?-1:1;
+  const duration=500+Math.random()*500;
+  const anim=el.animate([
+   {transform:"translateX(0)",filter:"none",easing:"cubic-bezier(.6,0,.85,.35)"},
+   {transform:`translateX(${dir*off}px)`,filter:`opacity(.45) drop-shadow(${dir*off*0.55}px 0 0 red) drop-shadow(${-dir*off*0.55}px 0 0 cyan)`,easing:"cubic-bezier(.15,.65,.4,1)"},
+   {t
