@@ -45,7 +45,7 @@ button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--te
 .tickerControls{display:flex;gap:4px;flex:0 0 auto;padding:0 8px}.tickerControls button{width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;line-height:1;font-weight:900}
 .bootTarget{opacity:0}
 .alienLogo{display:flex;justify-content:center;align-items:center;padding:3px 0 4px}
-.retroScreen{position:relative;width:min(66vw,220px);aspect-ratio:1;border-radius:14px;color:var(--text);background:radial-gradient(circle at 50% 38%,var(--panel2) 0%,var(--panel) 72%,transparent 100%);border:1px solid var(--line);box-shadow:0 0 14px var(--text),0 0 30px var(--text);overflow:hidden}
+.retroScreen{position:relative;width:min(33vw,110px);aspect-ratio:1;border-radius:14px;color:var(--text);background:radial-gradient(circle at 50% 38%,var(--panel2) 0%,var(--panel) 72%,transparent 100%);border:1px solid var(--line);box-shadow:0 0 14px var(--text),0 0 30px var(--text);overflow:hidden}
 .retroScreen::before{content:"";position:absolute;inset:-45%;border-radius:50%;background:radial-gradient(circle,var(--text) 0%,var(--text) 15%,transparent 72%);opacity:.32;filter:blur(8px);z-index:-1;pointer-events:none}
 .retroScreen svg{width:100%;height:100%;display:block}
 @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
@@ -98,9 +98,9 @@ window.addEventListener('error',function(e){
  <line x1="0" y1="110" x2="200" y2="110" stroke="currentColor" stroke-width="1"/>
  <g id="fanGroup"></g>
  <g id="rungsGroup"></g>
- <polygon points="100,110 65,200 135,200" style="fill:var(--bg)"/>
- <line x1="100" y1="110" x2="65" y2="200" stroke="currentColor" stroke-width="1.4"/>
- <line x1="100" y1="110" x2="135" y2="200" stroke="currentColor" stroke-width="1.4"/>
+ <polygon points="65,200 135,200 108.75,110 91.25,110" style="fill:var(--bg)"/>
+ <line x1="65" y1="200" x2="91.25" y2="110" stroke="currentColor" stroke-width="1.4"/>
+ <line x1="135" y1="200" x2="108.75" y2="110" stroke="currentColor" stroke-width="1.4"/>
 </svg></div></div>
 </main>
 
@@ -622,43 +622,48 @@ function buildStars(){
 }
 buildStars();
 
+// Ground grid: width at any given screen-Y is driven by ONE shared
+// function, referenced from the horizon width (not the bottom width) —
+// so the gap between lines near the horizon stays close to the gap at
+// the bottom, instead of collapsing toward the vanishing point. Fan
+// lines and rungs both read from this same function, so they can never
+// end up mismatched.
+const GRID_HORIZON_Y=110,GRID_BOTTOM_Y=200,GRID_VP_X=100,GRID_BOTTOM_WIDTH=200,GRID_HORIZON_WIDTH=140;
+function gridWidthAtY(y){
+ const t=(y-GRID_HORIZON_Y)/(GRID_BOTTOM_Y-GRID_HORIZON_Y);
+ return GRID_HORIZON_WIDTH+(GRID_BOTTOM_WIDTH-GRID_HORIZON_WIDTH)*t;
+}
+
 function buildFanLines(){
- // Radiating floor lines from the vanishing point, clipped against
- // whichever frame edge (bottom, left, or right) each ray actually exits
- // through — so the near-horizon corners get covered too, not just the
- // lines that happen to reach the bottom edge.
  const g=$("fanGroup");
  if(!g)return;
- const vpX=100,vpY=110,left=0,right=200,bottom=200,N=34,spread=1400;
+ const laneCount=11;
  let html="";
- for(let i=0;i<=N;i++){
-  const t=i/N;
-  const targetX=vpX+(t-0.5)*2*spread;
-  const dx=targetX-vpX,dy=bottom-vpY;
-  let s=1,exitX=vpX+dx*s;
-  if(exitX<left)s=(left-vpX)/dx;
-  else if(exitX>right)s=(right-vpX)/dx;
-  exitX=vpX+dx*s;
-  const exitY=vpY+dy*s;
-  html+=`<line x1="${vpX}" y1="${vpY}" x2="${exitX.toFixed(1)}" y2="${exitY.toFixed(1)}" stroke="currentColor" stroke-width=".6" opacity=".5"/>`;
+ for(let i=0;i<=laneCount;i++){
+  const f=i/laneCount;
+  const bottomX=f*GRID_BOTTOM_WIDTH;
+  const horizonX=GRID_VP_X-GRID_HORIZON_WIDTH/2+f*GRID_HORIZON_WIDTH;
+  html+=`<line x1="${bottomX.toFixed(1)}" y1="${GRID_BOTTOM_Y}" x2="${horizonX.toFixed(1)}" y2="${GRID_HORIZON_Y}" stroke="currentColor" stroke-width=".6" opacity=".5"/>`;
  }
+ // Fill lines: from a point on the horizon line (spaced one interval
+ // further out than the interior fan's outermost line, not overlapping
+ // it) down to a point on the side wall, using the same angle throughout.
+ html+=`<line x1="17" y1="${GRID_HORIZON_Y}" x2="0" y2="144" stroke="currentColor" stroke-width=".6" opacity=".5"/>`;
+ html+=`<line x1="${GRID_BOTTOM_WIDTH-17}" y1="${GRID_HORIZON_Y}" x2="${GRID_BOTTOM_WIDTH}" y2="144" stroke="currentColor" stroke-width=".6" opacity=".5"/>`;
  g.innerHTML=html;
 }
 buildFanLines();
 
-const ROAD_HORIZON_Y=110,ROAD_BOTTOM_Y=200,ROAD_VP_X=100,ROAD_LEFT_X=0,ROAD_RIGHT_X=200,ROAD_RUNGS=26,ROAD_CYCLE_MS=4400;
+const ROAD_RUNGS=18,ROAD_CYCLE_MS=5500;
 function drawRoad(phase){
  const g=$("rungsGroup");
  if(!g)return;
  let html="";
  for(let i=0;i<ROAD_RUNGS;i++){
-  const z=((i/ROAD_RUNGS)+phase)%1;
-  if(z<=0.001)continue;
-  const y=ROAD_HORIZON_Y+(ROAD_BOTTOM_Y-ROAD_HORIZON_Y)*z*z;
-  const xL=ROAD_VP_X+(ROAD_LEFT_X-ROAD_VP_X)*z;
-  const xR=ROAD_VP_X+(ROAD_RIGHT_X-ROAD_VP_X)*z;
-  const opacity=(Math.min(1,z*1.3)*0.6).toFixed(2);
-  html+=`<line x1="${xL.toFixed(1)}" y1="${y.toFixed(1)}" x2="${xR.toFixed(1)}" y2="${y.toFixed(1)}" stroke="currentColor" stroke-width="1" opacity="${opacity}"/>`;
+  const t=((i/ROAD_RUNGS)+phase)%1;
+  const y=GRID_HORIZON_Y+(GRID_BOTTOM_Y-GRID_HORIZON_Y)*t*t;
+  const opacity=(0.2+0.75*t).toFixed(2);
+  html+=`<line x1="0" y1="${y.toFixed(1)}" x2="${GRID_BOTTOM_WIDTH}" y2="${y.toFixed(1)}" stroke="currentColor" stroke-width="1" opacity="${opacity}"/>`;
  }
  g.innerHTML=html;
 }
