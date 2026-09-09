@@ -84,7 +84,7 @@ window.addEventListener('error',function(e){
  <div class="forecast" id="forecast"></div>
 </section>
 
-<button class="bootTarget" onclick="loadWeather();loadNews();replayBootFlicker()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
+<button class="bootTarget" onclick="playBeep();loadWeather();loadNews();replayBootFlicker()">↻ REFRESH CONDITIONS</button><div class="error" id="error"></div>
 <div class="alienLogo bootTarget"><div class="alienBadge"><span>🏍️</span></div></div>
 </main>
 
@@ -269,7 +269,12 @@ function flashNote(msg){
 let autoFollowStatus=true;
 let currentLevel="GREEN";
 const levelToSchemeIdx={GREEN:0,AMBER:1,RED:2,BLUE:3};
+function playBeep(){
+ const s=$("bootSound");
+ if(s){s.currentTime=0;s.play().catch(()=>{});}
+}
 function toggleAutoFollow(){
+ playBeep();
  autoFollowStatus=!autoFollowStatus;
  if(autoFollowStatus){
   applyScheme(levelToSchemeIdx[currentLevel]??0);
@@ -279,6 +284,7 @@ function toggleAutoFollow(){
  }
 }
 function cycleScheme(){
+ playBeep();
  autoFollowStatus=false;
  schemeIdx=(schemeIdx+1)%schemes.length;
  applyScheme(schemeIdx);
@@ -331,13 +337,13 @@ function glitchOnce(el){
   anim.onfinish=resolve;
  });
 }
-function glitchSlide(el){
+function glitchSlide(el,offsetMult=1,durationMult=1){
  // A slower directional smear-and-return, with an asymmetric ramp (fast
  // away from center, easing back in) rather than constant speed.
  return new Promise(resolve=>{
-  const off=16+Math.random()*26;
+  const off=(16+Math.random()*26)*offsetMult;
   const dir=Math.random()<0.5?-1:1;
-  const duration=500+Math.random()*500;
+  const duration=(500+Math.random()*500)*durationMult;
   const anim=el.animate([
    {transform:"translateX(0)",filter:"none",easing:"cubic-bezier(.6,0,.85,.35)"},
    {transform:`translateX(${dir*off}px)`,filter:`opacity(.45) drop-shadow(${dir*off*0.55}px 0 0 red) drop-shadow(${-dir*off*0.55}px 0 0 cyan)`,easing:"cubic-bezier(.15,.65,.4,1)"},
@@ -351,7 +357,7 @@ async function runGlitchPulse(){
  if(pool.length){
   const el=pool[Math.floor(Math.random()*pool.length)];
   if(Math.random()<0.3){
-   await glitchSlide(el);
+   await glitchSlide(el,0.5,2);
   }else{
    const burst=Math.random()<0.4?2+Math.floor(Math.random()*3):1;
    for(let i=0;i<burst;i++){
@@ -363,6 +369,28 @@ async function runGlitchPulse(){
  setTimeout(runGlitchPulse,1800+Math.random()*3400);
 }
 setTimeout(runGlitchPulse,2000+Math.random()*2000);
+
+// Boot-screen glitch loop — same effect, its own timer running roughly
+// twice as often, and it self-terminates once the boot screen is gone.
+async function runBootGlitchPulse(){
+ const bootScreen=$("bootScreen");
+ if(!bootScreen)return;
+ const pool=bootScreen.querySelectorAll("#bootPrompt button, .bootLine");
+ if(pool.length){
+  const el=pool[Math.floor(Math.random()*pool.length)];
+  if(Math.random()<0.3){
+   await glitchSlide(el);
+  }else{
+   const burst=Math.random()<0.4?2+Math.floor(Math.random()*3):1;
+   for(let i=0;i<burst;i++){
+    await glitchOnce(el);
+    if(i<burst-1)await new Promise(r=>setTimeout(r,35+Math.random()*70));
+   }
+  }
+ }
+ setTimeout(runBootGlitchPulse,900+Math.random()*1700);
+}
+setTimeout(runBootGlitchPulse,600+Math.random()*900);
 
 function flickerTitle(){
  const el=$("brandTitle");
