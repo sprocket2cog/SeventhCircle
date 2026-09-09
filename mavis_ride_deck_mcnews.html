@@ -41,10 +41,10 @@ button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--te
 .ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(8px,2.4vw,10px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(10px,2.8vw,12px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}@keyframes scroll{to{transform:translateX(-100%)}}
 .tickerControls{display:flex;gap:4px;flex:0 0 auto;padding:0 8px}.tickerControls button{width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;line-height:1;font-weight:900}
 .bootTarget{opacity:0}
-.alienLogo{display:flex;justify-content:center;align-items:center;padding:16px 0 1px}
+.alienLogo{display:flex;justify-content:center;align-items:center;padding:16px 0 4px}
 .alienBadge{position:relative;width:clamp(74px,22vw,116px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,var(--panel2) 0%,var(--panel) 55%,transparent 100%);perspective:600px}
 .alienBadge::before{content:"";position:absolute;inset:-55%;border-radius:50%;background:radial-gradient(circle,var(--text) 0%,var(--text) 15%,transparent 72%);opacity:.4;filter:blur(7px);z-index:-1;pointer-events:none}
-.alienBadge span{display:inline-block;line-height:1;font-size:clamp(38px,12vw,64px);transform-style:preserve-3d;animation:spinY 3.2s linear infinite;filter:grayscale(1) sepia(1) saturate(var(--tint-sat,3.2)) hue-rotate(var(--tint-rotate,100deg)) brightness(var(--tint-bri,1.05))}
+.alienBadge span{position:relative;top:-0.1em;display:inline-block;line-height:1;font-size:clamp(38px,12vw,64px);transform-style:preserve-3d;animation:spinY 3.2s linear infinite;filter:grayscale(1) sepia(1) saturate(var(--tint-sat,3.2)) hue-rotate(var(--tint-rotate,100deg)) brightness(var(--tint-bri,1.05))}
 @media(min-width:700px){body{padding:15px}.page{border:1px solid var(--line);border-radius:20px;min-height:calc(100dvh - 30px)}}
 </style>
 <script>
@@ -59,6 +59,7 @@ window.addEventListener('error',function(e){
 </head>
 <body>
 <div class="bootScreen" id="bootScreen"><div class="bootText" id="bootTextContainer"></div></div>
+<audio id="bootSound" preload="auto" src="https://raw.githubusercontent.com/sprocket2cog/SeventhCircle/a5ab4259e1f04ce14897b68d0fb01c6ab99ca56f/beeps1.wav"></audio>
 <div class="scanlines"></div>
 <div class="rollScan"></div>
 <main class="page">
@@ -163,6 +164,11 @@ function typeLine(text,container){
 async function runBootSequence(){
  const container=$("bootTextContainer");
  if(!container)return;
+ const sound=$("bootSound");
+ if(sound){
+  sound.currentTime=0;
+  sound.play().catch(()=>{/* autoplay blocked until the user interacts once — harmless */});
+ }
  const lines=pickBootLines();
  for(const line of lines){
   await typeLine(line,container);
