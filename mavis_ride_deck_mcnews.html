@@ -167,7 +167,9 @@ async function runBootSequence(){
  const sound=$("bootSound");
  if(sound){
   sound.currentTime=0;
-  sound.play().catch(()=>{/* autoplay blocked until the user interacts once — harmless */});
+  setTimeout(()=>{
+   sound.play().catch(()=>{/* autoplay blocked until the user interacts once — harmless */});
+  },1000);
  }
  const lines=pickBootLines();
  for(const line of lines){
