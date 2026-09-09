@@ -11,7 +11,7 @@
 <style>
 :root{--bg:#07090c;--panel:#10141a;--panel2:#0c1015;--line:#1e3a26;--text:#39d353;--muted:#4f9a5e;--green:#39d353;--blue:#4da3ff;--amber:#ffb020;--red:#ff4545;--scan-color:rgba(57,211,83,0.14)}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:'VT323',monospace}
-body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clamp(8px,2vw,16px) clamp(8px,2.5vw,18px) calc(52px + env(safe-area-inset-bottom))}
+body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clamp(8px,2vw,16px) clamp(8px,2.5vw,18px) calc(90px + env(safe-area-inset-bottom))}
 .header{display:grid;grid-template-columns:clamp(44px,12vw,56px) 1fr clamp(44px,12vw,56px);align-items:center;gap:8px;padding:2px 2px 5px;perspective:500px}.brand{justify-self:center;text-align:center;display:inline-block;font-size:clamp(12px,3.2vw,15px);font-weight:400;letter-spacing:.06em;color:var(--text);white-space:nowrap;overflow:visible;min-width:0;transform-style:preserve-3d;animation:spinY 5s linear infinite}
 .schemeIcon{justify-self:center}
 .clock{justify-self:end}
@@ -41,7 +41,7 @@ body{min-height:100dvh}.page{width:100%;max-width:600px;margin:auto;padding:clam
 .forecast{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1.3vw,8px)}.hour{min-width:0;text-align:center;border:1px solid var(--line);border-radius:10px;padding:clamp(7px,2vw,10px) 2px}.hour b{font-size:clamp(13px,3.8vw,17px)}.hour .icon{font-size:clamp(17px,5vw,24px);margin:4px 0}.hour strong{font-size:clamp(12px,3.5vw,16px);display:block}.hour small{font-size:clamp(11px,3.1vw,14px);color:var(--muted);display:block;margin-top:3px}
 button{width:100%;border:1px solid var(--line);background:#151b22;color:var(--text);border-radius:10px;padding:10px;font-weight:400;font-size:14px}.error{text-align:center;color:var(--muted);font-size:11px;margin-top:5px}
 .refreshBtn{display:block;width:auto;min-width:0;margin:0 auto;padding:5px 16px;font-size:7px}
-.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(11px,3.4vw,14px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed,70s) linear infinite;font-size:clamp(14px,3.9vw,17px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}@keyframes scroll{to{transform:translateX(-100%)}}
+.ticker{position:fixed;z-index:20;left:0;right:0;bottom:0;height:calc(38px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#050608;border-top:1px solid var(--line);display:flex;align-items:center;overflow:hidden}.tickerTop{bottom:calc(38px + env(safe-area-inset-bottom));padding-bottom:0}.tag{height:38px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;background:#10141a;font-size:clamp(11px,3.4vw,14px);font-weight:900;letter-spacing:.1em}.tickerViewport{overflow:hidden;white-space:nowrap;flex:1}.track{display:inline-block;padding-left:100%;animation:scroll var(--scroll-speed-mc,70s) linear infinite;font-size:clamp(14px,3.9vw,17px)}.track a{color:inherit;text-decoration:none}.track a:active{text-decoration:underline}#tickerSD{animation-duration:var(--scroll-speed-sd,70s)}@keyframes scroll{to{transform:translateX(-100%)}}
 .tickerControls{display:flex;gap:4px;flex:0 0 auto;padding:0 8px}.tickerControls button{width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;line-height:1;font-weight:900}
 .bootTarget{opacity:0}
 .alienLogo{display:flex;justify-content:center;align-items:center;padding:3px 0 4px}
@@ -90,7 +90,8 @@ window.addEventListener('error',function(e){
 <div class="alienLogo bootTarget"><div class="alienBadge"><span>🏍️</span></div></div>
 </main>
 
-<div class="ticker bootTarget"><div class="tag">🏍 MCNEWS</div><div class="tickerViewport"><div class="track" id="ticker">Loading MCNews headlines… • </div></div><div class="tickerControls"><button onclick="adjustTickerSpeed(-10)">+</button><button onclick="adjustTickerSpeed(10)">−</button></div></div>
+<div class="ticker tickerTop bootTarget"><div class="tag">SD 🧪</div><div class="tickerViewport"><div class="track" id="tickerSD">LOADING SCIENCEDAILY HEADLINES… • </div></div><div class="tickerControls"><button onclick="adjustTickerSpeed('sd',-10)">+</button><button onclick="adjustTickerSpeed('sd',10)">−</button></div></div>
+<div class="ticker bootTarget"><div class="tag">MC 🏍</div><div class="tickerViewport"><div class="track" id="ticker">Loading MCNews headlines… • </div></div><div class="tickerControls"><button onclick="adjustTickerSpeed('mc',-10)">+</button><button onclick="adjustTickerSpeed('mc',10)">−</button></div></div>
 
 <script>
 document.getElementById("reason").textContent="Script loaded — starting checks…";
@@ -104,14 +105,11 @@ const $=id=>document.getElementById(id);
 // a real boot log, then fade the boot screen and flicker each dashboard
 // section on with a random, staggered delay.
 const bootPool=[
- "ATMOSPHERIC ARRAY .... ONLINE",
-  "WEAPON SYSTEM .... ONLINE",
-  "AUDIO SYSTEM ... INITIALIZING",
- "LOCAL HANDSHAKE ... CONNECTED",
- "MCNEWS UPLINK ... ESTABLISHED",
- "MAVIS INTERFACE ... NOMINAL",
-  "SATELLITE LOCK .... ACCEPTED",
- "RIDE LOGIC ... CALIBRATING"
+ "ATMOSPHERIC ARRAY ........ ONLINE",
+ "LOCAL SENSOR HANDSHAKE ... ACCEPTED",
+ "MCNEWS UPLINK ............ ESTABLISHED",
+ "MAVIS INTERFACE .......... NOMINAL",
+ "RIDE LOGIC ............... CALIBRATING"
 ];
 const gagPool=[
  "FUCK IT - GREEN!",
@@ -119,13 +117,12 @@ const gagPool=[
  "IF IT'S RAINING I'M GOING HOME.",
  "THERE IS NO SPOON",
  "OK THIS TIME WE HAVE A SPOON",
- "IGNORE THE FUCKING MESS.",
+ "PLEASE IGNORE THE FUCKING MESS.",
  "THIS IS A TEST, YEAH IT'S JUST A TEST.",
  "PLEASE DON'T JUDGE ME",
  "THE AI HAS LEFT THE BUILDING",
  "I MEANT TO WRITE THIS",
  "[PLACEHOLDER TEXT]",
- "TURTLES GOING DOWN ",
  "404 ERROR"
 ];
 function pickRandomLines(pool,n){
@@ -236,10 +233,10 @@ const codes={0:"Clear",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",
 const icons={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌦️",63:"🌧️",65:"🌧️",71:"🌨️",73:"🌨️",75:"❄️",80:"🌦️",81:"🌧️",82:"🌧️",95:"⛈️",96:"⛈️",99:"⛈️"};
 function clock(){$("clock").textContent=new Intl.DateTimeFormat("en-AU",{hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())}setInterval(clock,1000);clock();
 
-let tickerSeconds=70; // lower = faster scroll
-function adjustTickerSpeed(delta){
- tickerSeconds=Math.max(15,Math.min(150,tickerSeconds+delta));
- document.documentElement.style.setProperty("--scroll-speed",tickerSeconds+"s");
+let tickerSpeeds={mc:70,sd:70}; // lower = faster scroll
+function adjustTickerSpeed(which,delta){
+ tickerSpeeds[which]=Math.max(15,Math.min(150,tickerSpeeds[which]+delta));
+ document.documentElement.style.setProperty(which==="mc"?"--scroll-speed-mc":"--scroll-speed-sd",tickerSpeeds[which]+"s");
 }
 
 // Colour scheme cycling — the little glowing icon swaps the whole page's
@@ -420,13 +417,14 @@ function escapeHtml(s){
  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
-function setTickerItems(items){
+function setTickerItems(trackId,items){
  // items: array of {title, link}
- const track=$("ticker");
+ const track=$(trackId);
+ if(!track)return;
  track.innerHTML=items.map(it=>
   it.link
-   ? `<a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`
-   : escapeHtml(it.title)
+   ? `<a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title.toUpperCase())}</a>`
+   : escapeHtml(it.title.toUpperCase())
  ).join("  •  ")+"  •  ";
  // restart the CSS scroll animation so full-length text scrolls cleanly
  track.style.animation="none";
@@ -434,17 +432,17 @@ function setTickerItems(items){
  track.style.animation="";
 }
 
-function setTicker(text){
- const track=$("ticker");
- track.textContent=text;
+function setTicker(trackId,text){
+ const track=$(trackId);
+ if(!track)return;
+ track.textContent=text.toUpperCase();
  track.style.animation="none";
  void track.offsetWidth;
  track.style.animation="";
 }
 
-async function loadNews(){
+async function loadNewsFeed(trackId,feedUrl){
  const attempts=[];
- const feedUrl="https://www.mcnews.com.au/feed/";
 
  // Strategy 1: a dedicated RSS-to-JSON service. These tend to get through
  // bot-protection (e.g. Cloudflare) better than a generic pass-through
@@ -452,7 +450,7 @@ async function loadNews(){
  try{
   const j=await viaProxy("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(feedUrl));
   if(!j.items||!j.items.length)throw new Error("empty");
-  setTickerItems(j.items.slice(0,10).map(i=>({title:i.title,link:i.link})));
+  setTickerItems(trackId,j.items.slice(0,10).map(i=>({title:i.title,link:i.link})));
   return;
  }catch(e){attempts.push("rss2json: "+(e&&e.message?e.message:e))}
 
@@ -473,11 +471,15 @@ async function loadNews(){
     link:(item.querySelector("link")?.textContent||"").trim()
    })).filter(it=>it.title);
    if(!items.length)throw new Error("empty");
-   setTickerItems(items.slice(0,10));
+   setTickerItems(trackId,items.slice(0,10));
    return;
   }catch(e){attempts.push(name+": "+(e&&e.message?e.message:e))}
  }
- setTicker("News error — "+attempts.join(" | ")+" • ");
+ setTicker(trackId,"News error — "+attempts.join(" | ")+" • ");
+}
+function loadNews(){
+ loadNewsFeed("ticker","https://www.mcnews.com.au/feed/");
+ loadNewsFeed("tickerSD","https://www.sciencedaily.com/rss/all.xml");
 }
 loadNews();
 setInterval(loadNews,15*60*1000); // refresh headlines every 15 minutes
