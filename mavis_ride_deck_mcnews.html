@@ -104,11 +104,14 @@ const $=id=>document.getElementById(id);
 // a real boot log, then fade the boot screen and flicker each dashboard
 // section on with a random, staggered delay.
 const bootPool=[
- "ATMOSPHERIC ARRAY ........ ONLINE",
- "LOCAL SENSOR HANDSHAKE ... ACCEPTED",
- "MCNEWS UPLINK ............ ESTABLISHED",
- "MAVIS INTERFACE .......... NOMINAL",
- "RIDE LOGIC ............... CALIBRATING"
+ "ATMOSPHERIC ARRAY .... ONLINE",
+  "WEAPON SYSTEM .... ONLINE",
+  "AUDIO SYSTEM ... INITIALIZING",
+ "LOCAL HANDSHAKE ... CONNECTED",
+ "MCNEWS UPLINK ... ESTABLISHED",
+ "MAVIS INTERFACE ... NOMINAL",
+  "SATELLITE LOCK .... ACCEPTED",
+ "RIDE LOGIC ... CALIBRATING"
 ];
 const gagPool=[
  "FUCK IT - GREEN!",
@@ -116,12 +119,13 @@ const gagPool=[
  "IF IT'S RAINING I'M GOING HOME.",
  "THERE IS NO SPOON",
  "OK THIS TIME WE HAVE A SPOON",
- "PLEASE IGNORE THE FUCKING MESS.",
+ "IGNORE THE FUCKING MESS.",
  "THIS IS A TEST, YEAH IT'S JUST A TEST.",
  "PLEASE DON'T JUDGE ME",
  "THE AI HAS LEFT THE BUILDING",
  "I MEANT TO WRITE THIS",
  "[PLACEHOLDER TEXT]",
+ "TURTLES GOING DOWN ",
  "404 ERROR"
 ];
 function pickRandomLines(pool,n){
