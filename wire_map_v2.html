@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Wire Map</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root{
+  --bg:#020a04; --line:#21ff6b; --minor:#0f7a35; --accent:#ffe14a; --text:#9dffbd; --grid:#06240f;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;overflow:hidden;overscroll-behavior:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+#top{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:calc(8px + env(safe-area-inset-top)) 10px 8px;border-bottom:1px solid var(--minor)}
+#title{font-size:15px;letter-spacing:.25em;color:var(--line);text-shadow:0 0 8px var(--line);white-space:nowrap}
+#status{font-size:10px;letter-spacing:.1em;opacity:.85;text-align:right;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mapwrap{flex:1;position:relative;min-height:0;background:var(--bg)}
+#map{position:absolute;inset:0}
+#bar{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--minor)}
+button,select{background:transparent;color:var(--line);border:1px solid var(--line);
+  font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  padding:12px 2px;border-radius:2px;cursor:pointer;text-shadow:0 0 6px var(--line)}
+button{flex:1;min-width:0}
+select{flex:0 0 66px;background:var(--bg);text-shadow:none;padding:12px 0;text-align:center;
+  -webkit-appearance:none;appearance:none}
+button:active{background:var(--line);color:var(--bg);text-shadow:none}
+button.on{background:var(--line);color:var(--bg);text-shadow:none}
+#ticker{overflow:hidden;white-space:nowrap;border-top:1px solid var(--minor);
+  padding:7px 0 calc(7px + env(safe-area-inset-bottom));font-size:12px;
+  letter-spacing:.08em;color:var(--accent);background:rgba(0,0,0,.35)}
+#tickInner{display:inline-block;padding-left:100%;animation:scroll 60s linear infinite;will-change:transform}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+.corner{position:absolute;width:16px;height:16px;border:2px solid var(--accent);pointer-events:none;z-index:3}
+.tl{top:6px;left:6px;border-right:0;border-bottom:0}.tr{top:6px;right:6px;border-left:0;border-bottom:0}
+.bl{bottom:6px;left:6px;border-right:0;border-top:0}.br{bottom:6px;right:6px;border-left:0;border-top:0}
+#legend{position:absolute;left:14px;bottom:12px;font-size:10px;letter-spacing:.1em;opacity:.85;
+  text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;line-height:1.55;z-index:3}
+.maplibregl-ctrl-group{background:rgba(0,0,0,.55)!important;border:1px solid var(--minor);border-radius:2px;box-shadow:none!important}
+.maplibregl-ctrl-group button{border:0;width:34px;height:34px;padding:0}
+.maplibregl-ctrl button .maplibregl-ctrl-icon{filter:invert(1) sepia(1) saturate(6) hue-rotate(50deg)}
+.maplibregl-ctrl-top-right{top:10px;right:10px}
+.me svg{filter:drop-shadow(0 0 6px var(--accent));overflow:visible}
+.me path{fill:var(--accent)}
+.me .ring{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.55;transform-origin:center;animation:ping 1.6s ease-out infinite}
+@keyframes ping{from{transform:scale(.6);opacity:.8}to{transform:scale(1.5);opacity:0}}
+@media (orientation:landscape) and (max-height:480px){
+  #top{padding-top:3px;padding-bottom:3px}
+  button,select{padding-top:7px;padding-bottom:7px}
+  #bar{padding:4px 10px}
+  #ticker{padding-top:3px;padding-bottom:3px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div id="title">WIRE MAP</div>
+    <div id="status">STARTING…</div>
+  </div>
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div id="legend"></div>
+  </div>
+  <div id="bar">
+    <button id="btnColor">Colour</button>
+    <button id="btnLoc">Locate</button>
+    <button id="btnPack">Save</button>
+    <select id="packR" aria-label="Area to save">
+      <option value="10">10km</option>
+      <option value="25" selected>25km</option>
+      <option value="50">50km</option>
+    </select>
+    <button id="btnFull">Full</button>
+  </div>
+  <div id="ticker"><span id="tickInner">LOADING WEATHER…</span></div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+if(typeof maplibregl==="undefined"){
+  $("status").textContent="MAP LIBRARY NOT LOADED · CONNECT TO INTERNET AND RELOAD";
+  return;
+}
+const ls={
+  get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+};
+
+//#STYLE_START
+const PALETTES=[
+ {n:"TERMINAL", bg:"#020a04", line:"#21ff6b", minor:"#0f7a35", accent:"#ffe14a", text:"#9dffbd", grid:"#06240f"},
+ {n:"AMBER",    bg:"#0a0602", line:"#ff8a1c", minor:"#8a4a0c", accent:"#25e7ff", text:"#ffd19a", grid:"#2a1604"},
+ {n:"NEON",     bg:"#06020f", line:"#ff2bd6", minor:"#5b1a8a", accent:"#25e7ff", text:"#ffb3f0", grid:"#1a0a33"},
+ {n:"ICE",      bg:"#020812", line:"#3dd5ff", minor:"#16587a", accent:"#ffffff", text:"#bfeaff", grid:"#06203a"},
+ {n:"TOXIC",    bg:"#050a00", line:"#c6ff00", minor:"#5a7a00", accent:"#ff3d3d", text:"#e6ffa0", grid:"#1a2800"},
+ {n:"BLOOD",    bg:"#0a0203", line:"#ff3b3b", minor:"#7a1515", accent:"#ffd24a", text:"#ffb3b3", grid:"#2a0808"}
+];
+const CM={}; // layerId -> {paintProperty: paletteKey}, used to recolour live
+function buildStyle(pi){
+  const p=PALETTES[pi];
+  const L=[];
+  const add=(layer,cm)=>{L.push(layer);if(cm)CM[layer.id]=cm};
+  const cls=arr=>["match",["get","class"],arr,true,false];
+  const W=stops=>["interpolate",["exponential",1.5],["zoom"]].concat(...stops);
+  const round={"line-cap":"round","line-join":"round"};
+  const name=["coalesce",["get","name:latin"],["get","name"]];
+  const font=["Noto Sans Regular"];
+
+  add({id:"bg",type:"background",paint:{"background-color":p.bg}},{"background-color":"bg"});
+  add({id:"water",type:"fill",source:"om","source-layer":"water",
+       paint:{"fill-color":p.grid,"fill-outline-color":p.minor}},
+      {"fill-color":"grid","fill-outline-color":"minor"});
+  add({id:"waterway",type:"line",source:"om","source-layer":"waterway",layout:round,
+       paint:{"line-color":p.minor,"line-width":W([[8,.5],[14,1.2],[18,3]])}},{"line-color":"minor"});
+  add({id:"bldg",type:"line",source:"om","source-layer":"building",minzoom:14.5,
+       paint:{"line-color":p.minor,"line-width":.7,"line-opacity":.85}},{"line-color":"minor"});
+
+  add({id:"road_minor",type:"line",source:"om","source-layer":"transportation",minzoom:11,layout:round,
+       filter:cls(["minor"]),
+       paint:{"line-color":p.minor,"line-width":W([[11,.4],[14,.9],[18,4]])}},{"line-color":"minor"});
+  add({id:"road_service",type:"line",source:"om","source-layer":"transportation",minzoom:14,layout:round,
+       filter:cls(["service","track"]),
+       paint:{"line-color":p.minor,"line-width":W([[14,.5],[18,2.5]]),"line-opacity":.8}},{"line-color":"minor"});
+  add({id:"road_tertiary",type:"line",source:"om","source-layer":"transportation",minzoom:9,layout:round,
+       filter:cls(["tertiary"]),
+       paint:{"line-color":p.line,"line-opacity":.7,"line-width":W([[9,.6],[14,1.4],[18,6]])}},{"line-color":"line"});
+  add({id:"road_glow",type:"line",source:"om","source-layer":"transportation",layout:round,
+       filter:cls(["motorway","trunk","primary","secondary"]),
+       paint:{"line-color":p.line,"line-opacity":.28,"line-blur":4,"line-width":W([[5,3],[12,8],[18,26]])}},{"line-color":"line"});
+  add({id:"road_secondary",type:"line",source:"om","source-layer":"transportation",layout:round,
+       filter:cls(["secondary"]),
+       paint:{"line-color":p.line,"line-width":W([[7,.8],[14,2],[18,8]])}},{"line-color":"line"});
+  add({id:"road_main",type:"line",source:"om","source-layer":"transportation",layout:round,
+       filter:cls(["motorway","trunk","primary"]),
+       paint:{"line-color":p.line,"line-width":W([[5,.9],[12,2.6],[14,3.4],[18,12]])}},{"line-color":"line"});
+  add({id:"rail",type:"line",source:"om","source-layer":"transportation",minzoom:8,
+       filter:cls(["rail"]),
+       paint:{"line-color":p.minor,"line-dasharray":[2,3],"line-width":1}},{"line-color":"minor"});
+
+  add({id:"road_names",type:"symbol",source:"om","source-layer":"transportation_name",minzoom:11,
+       filter:cls(["motorway","trunk","primary","secondary","tertiary"]),
+       layout:{"symbol-placement":"line","text-field":name,"text-font":font,"text-size":10,
+               "text-letter-spacing":.1,"text-transform":"uppercase","symbol-spacing":320},
+       paint:{"text-color":p.accent,"text-halo-color":p.bg,"text-halo-width":1.6}},
+      {"text-color":"accent","text-halo-color":"bg"});
+  add({id:"places",type:"symbol",source:"om","source-layer":"place",minzoom:8,
+       filter:cls(["city","town","village","suburb","hamlet"]),
+       layout:{"text-field":name,"text-font":font,
+               "text-size":["interpolate",["linear"],["zoom"],8,10,15,14],
+               "text-transform":"uppercase","text-letter-spacing":.15,"text-max-width":8},
+       paint:{"text-color":p.text,"text-halo-color":p.bg,"text-halo-width":1.6}},
+      {"text-color":"text","text-halo-color":"bg"});
+
+  return {
+    version:8,
+    glyphs:"wmg://{fontstack}/{range}",
+    sources:{om:{type:"vector",tiles:["wm://{z}/{x}/{y}"],minzoom:0,maxzoom:14}},
+    layers:L
+  };
+}
+//#STYLE_END
+
+/* ---------- state ---------- */
+let pi=(+ls.get("wm_pal")||0)%PALETTES.length;
+const DEF={lat:-37.88,lon:147.98};   // Lakes Entrance
+let user={lat:DEF.lat,lon:DEF.lon,real:false};
+let follow=true,firstFix=false,watchId=null,map=null,marker=null,TPL=null,tilesSaved=0;
+const statusEl=$("status"),legend=$("legend"),tick=$("tickInner");
+const setStatus=t=>{statusEl.textContent=t};
+
+/* ---------- local tile store (IndexedDB) ---------- */
+const IDB={db:null,ok:false,
+  open(){return new Promise(res=>{try{
+    const rq=indexedDB.open("wiremap",1);
+    rq.onupgradeneeded=()=>rq.result.createObjectStore("t");
+    rq.onsuccess=()=>{IDB.db=rq.result;IDB.ok=true;res(true)};
+    rq.onerror=()=>res(false);rq.onblocked=()=>res(false);
+  }catch(e){res(false)}})},
+  get(k){return new Promise(res=>{if(!IDB.ok)return res(undefined);try{
+    const r=IDB.db.transaction("t").objectStore("t").get(k);
+    r.onsuccess=()=>res(r.result);r.onerror=()=>res(undefined);}catch(e){res(undefined)}})},
+  has(k){return new Promise(res=>{if(!IDB.ok)return res(false);try{
+    const r=IDB.db.transaction("t").objectStore("t").count(k);
+    r.onsuccess=()=>res(r.result>0);r.onerror=()=>res(false);}catch(e){res(false)}})},
+  put(k,v){return new Promise(res=>{if(!IDB.ok)return res();try{
+    const tx=IDB.db.transaction("t","readwrite");tx.objectStore("t").put(v,k);
+    tx.oncomplete=()=>res();tx.onerror=()=>res();tx.onabort=()=>res();}catch(e){res()}})},
+  count(){return new Promise(res=>{if(!IDB.ok)return res(0);try{
+    const r=IDB.db.transaction("t").objectStore("t").count();
+    r.onsuccess=()=>res(r.result);r.onerror=()=>res(0);}catch(e){res(0)}})}
+};
+
+async function fetchBuf(url,signal,ms){
+  const c=new AbortController();
+  const to=setTimeout(()=>c.abort(),ms||15000);
+  if(signal)signal.addEventListener("abort",()=>c.abort());
+  try{
+    const r=await fetch(url,{signal:c.signal});
+    if(r.status===404||r.status===204)return new ArrayBuffer(0); // empty tile (sea etc.)
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    return await r.arrayBuffer();
+  }finally{clearTimeout(to)}
+}
+async function initTpl(){
+  try{
+    const r=await fetch("https://tiles.openfreemap.org/planet",{signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined});
+    const j=await r.json();
+    if(j.tiles&&j.tiles[0]){TPL=j.tiles[0];ls.set("wm_tpl",TPL)}
+  }catch(e){}
+  if(!TPL)TPL=ls.get("wm_tpl");
+}
+async function getTile(z,x,y,signal){
+  const k=z+"/"+x+"/"+y;
+  const hit=await IDB.get(k);
+  if(hit)return hit;
+  if(!TPL)throw new Error("no tile source");
+  let err;
+  for(let i=0;i<2;i++){
+    try{
+      const buf=await fetchBuf(TPL.replace("{z}",z).replace("{x}",x).replace("{y}",y),signal);
+      IDB.put(k,buf);                 // structured clone happens now, before MapLibre takes the buffer
+      return buf;
+    }catch(e){err=e;if(signal&&signal.aborted)break}
+  }
+  throw err;
+}
+function glyphUrl(path){
+  const i=path.lastIndexOf("/");
+  return "https://tiles.openfreemap.org/fonts/"+encodeURIComponent(path.slice(0,i))+"/"+path.slice(i+1)+".pbf";
+}
+async function getGlyph(path,signal){
+  const k="g/"+path;
+  const hit=await IDB.get(k);
+  if(hit)return hit;
+  const buf=await fetchBuf(glyphUrl(path),signal);
+  IDB.put(k,buf);
+  return buf;
+}
+maplibregl.addProtocol("wm",async(params,abort)=>{
+  const m=params.url.replace("wm://","").split("/").map(Number);
+  return {data:await getTile(m[0],m[1],m[2],abort&&abort.signal)};
+});
+maplibregl.addProtocol("wmg",async(params,abort)=>{
+  const path=decodeURIComponent(params.url.replace("wmg://",""));
+  return {data:await getGlyph(path,abort&&abort.signal)};
+});
+
+/* ---------- palette ---------- */
+function applyPalette(){
+  const p=PALETTES[pi],r=document.documentElement.style;
+  for(const k of ["bg","line","minor","accent","text","grid"])r.setProperty("--"+k,p[k]);
+  ls.set("wm_pal",pi);
+  if(map){
+    for(const id in CM)for(const prop in CM[id]){
+      try{map.setPaintProperty(id,prop,p[CM[id][prop]])}catch(e){}
+    }
+  }
+  updateLegend();
+}
+async function updateLegend(){
+  if(IDB.ok)tilesSaved=await IDB.count();
+  const z=map?map.getZoom():0,c=map?map.getCenter():{lat:user.lat,lng:user.lon};
+  legend.innerHTML=PALETTES[pi].n+" · Z"+z.toFixed(1)+" · "+c.lat.toFixed(3)+", "+c.lng.toFixed(3)
+    +"<br>"+tilesSaved+" TILES STORED"+(IDB.ok?"":" (STORAGE OFF)")
+    +"<br>© OPENSTREETMAP · OPENFREEMAP";
+}
+
+/* ---------- map ---------- */
+function initMap(){
+  map=new maplibregl.Map({
+    container:"map",style:buildStyle(pi),center:[user.lon,user.lat],zoom:13,maxZoom:18,minZoom:3,
+    attributionControl:false,maxPitch:0,dragRotate:true,fadeDuration:150
+  });
+  map.addControl(new maplibregl.NavigationControl({showZoom:false,visualizePitch:false}),"top-right");
+
+  const el=document.createElement("div");el.className="me";
+  el.innerHTML='<svg viewBox="-14 -14 28 28" width="30" height="30"><circle class="ring" r="11"/><path d="M0 -10 L7 8 L0 4 L-7 8Z"/></svg>';
+  marker=new maplibregl.Marker({element:el,rotationAlignment:"map",pitchAlignment:"map"})
+    .setLngLat([user.lon,user.lat]).addTo(map);
+
+  map.on("dragstart",()=>{follow=false;$("btnLoc").classList.remove("on")});
+  map.on("moveend",updateLegend);
+  map.on("click",e=>{            // no GPS? tap the map to say where you are
+    if(user.real)return;
+    user={lat:e.lngLat.lat,lon:e.lngLat.lng,real:false};
+    marker.setLngLat([user.lon,user.lat]);
+    setStatus("MANUAL LOCATION SET");
+    loadWeather();
+  });
+  map.on("error",e=>{
+    if(!TPL)setStatus("NO MAP DATA · CONNECT ONCE OR SAVE AN AREA");
+  });
+}
+
+/* ---------- GPS ---------- */
+function onFix(p){
+  const wasReal=user.real;
+  user={lat:p.coords.latitude,lon:p.coords.longitude,real:true};
+  if(typeof p.coords.heading==="number"&&!isNaN(p.coords.heading))marker.setRotation(p.coords.heading);
+  marker.setLngLat([user.lon,user.lat]);
+  if(!firstFix){
+    firstFix=true;
+    map.jumpTo({center:[user.lon,user.lat],zoom:14});
+    loadWeather();
+  }else if(follow){
+    map.easeTo({center:[user.lon,user.lat],duration:600});
+  }
+  if(!wasReal)$("btnLoc").classList.add("on");
+  setStatus("GPS LOCK · "+(p.coords.accuracy?Math.round(p.coords.accuracy)+" M":""));
+}
+function noGPS(){
+  if(user.real)return;
+  setStatus("NO GPS · TAP MAP TO SET LOCATION");
+  if(!firstFix){firstFix=true;loadWeather()}
+}
+function startGPS(){
+  if(!navigator.geolocation){noGPS();return}
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(onFix,noGPS,{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+}
+
+/* ---------- weather ---------- */
+const WCODE={0:"CLEAR",1:"MAINLY CLEAR",2:"PARTLY CLOUDY",3:"OVERCAST",45:"FOG",48:"RIME FOG",
+ 51:"LIGHT DRIZZLE",53:"DRIZZLE",55:"HEAVY DRIZZLE",56:"FREEZING DRIZZLE",57:"FREEZING DRIZZLE",
+ 61:"LIGHT RAIN",63:"RAIN",65:"HEAVY RAIN",66:"FREEZING RAIN",67:"FREEZING RAIN",
+ 71:"LIGHT SNOW",73:"SNOW",75:"HEAVY SNOW",77:"SNOW GRAINS",80:"SHOWERS",81:"HEAVY SHOWERS",82:"VIOLENT SHOWERS",
+ 85:"SNOW SHOWERS",86:"HEAVY SNOW SHOWERS",95:"THUNDERSTORM",96:"THUNDERSTORM + HAIL",99:"SEVERE THUNDERSTORM"};
+const compass=d=>["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(d/22.5)%16];
+function setTick(txt){
+  tick.textContent=txt;
+  tick.style.animation="none";void tick.offsetWidth;
+  tick.style.animation="";
+  tick.style.animationDuration=Math.max(40,txt.length*0.2)+"s";
+}
+async function loadWeather(){
+  try{
+    const u="https://api.open-meteo.com/v1/forecast?latitude="+user.lat.toFixed(4)+"&longitude="+user.lon.toFixed(4)
+     +"&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m"
+     +"&hourly=temperature_2m,precipitation_probability"
+     +"&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max"
+     +"&timezone=auto&forecast_days=2&wind_speed_unit=kmh";
+    const r=await fetch(u);if(!r.ok)throw new Error(r.status);
+    const j=await r.json(),c=j.current,d=j.daily,hm=s=>s.slice(11,16);
+    const parts=[
+      user.real?"YOUR LOCATION":"SET LOCATION",
+      WCODE[c.weather_code]||"—",
+      "TEMP "+Math.round(c.temperature_2m)+"°C (FEELS "+Math.round(c.apparent_temperature)+"°)",
+      "WIND "+Math.round(c.wind_speed_10m)+" KM/H "+compass(c.wind_direction_10m)+" · GUSTS "+Math.round(c.wind_gusts_10m),
+      "HUMIDITY "+c.relative_humidity_2m+"%",
+      "CLOUD "+c.cloud_cover+"%",
+      "PRESSURE "+Math.round(c.pressure_msl)+" HPA",
+      "RAIN NOW "+c.precipitation+" MM",
+      "TODAY "+Math.round(d.temperature_2m_min[0])+"° / "+Math.round(d.temperature_2m_max[0])+"° · RAIN CHANCE "+d.precipitation_probability_max[0]+"%",
+      "UV "+Math.round(d.uv_index_max[0]),
+      "SUNRISE "+hm(d.sunrise[0])+" · SUNSET "+hm(d.sunset[0])
+    ];
+    const i0=j.hourly.time.findIndex(t=>t>c.time),hrs=[];
+    if(i0>=0)for(let i=i0+1;i<j.hourly.time.length&&hrs.length<4;i+=2){
+      hrs.push(hm(j.hourly.time[i])+" "+Math.round(j.hourly.temperature_2m[i])+"° "+j.hourly.precipitation_probability[i]+"%");
+    }
+    if(hrs.length)parts.push("NEXT: "+hrs.join("  ·  "));
+    const txt=parts.join("   ▪   ")+"   ▪   ";
+    ls.set("wm_wx",JSON.stringify({t:txt,at:Date.now()}));
+    setTick(txt);
+  }catch(e){
+    let cached=null;try{cached=JSON.parse(ls.get("wm_wx"))}catch(x){}
+    if(cached)setTick("OFFLINE · LAST UPDATE "+new Date(cached.at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+"   ▪   "+cached.t);
+    else setTick("WEATHER OFFLINE   ▪   CHECK CONNECTION   ▪   ");
+  }
+}
+
+/* ---------- save an area (local map pack) ---------- */
+let packing=false,packCancel=false;
+const lon2x=(lon,z)=>Math.floor((lon+180)/360*(1<<z));
+const lat2y=(lat,z)=>{const r=lat*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*(1<<z))};
+async function packArea(){
+  const btn=$("btnPack");
+  if(packing){packCancel=true;return}
+  if(!IDB.ok){setStatus("STORAGE BLOCKED · OPEN PAGE OVER HTTPS (GITHUB PAGES) TO SAVE MAPS");return}
+  if(!TPL){setStatus("NO TILE SOURCE · CONNECT TO INTERNET FIRST");return}
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  const c=map.getCenter(),R=+$("packR").value,maxZ=R>=50?13:14;
+  const dLat=R/111.32,dLon=R/(111.32*Math.cos(c.lat*Math.PI/180));
+  const jobs=[];
+  for(let z=4;z<=maxZ;z++){
+    const n=(1<<z)-1;
+    const x0=Math.max(0,lon2x(c.lng-dLon,z)),x1=Math.min(n,lon2x(c.lng+dLon,z));
+    const y0=Math.max(0,lat2y(c.lat+dLat,z)),y1=Math.min(n,lat2y(c.lat-dLat,z));
+    for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)jobs.push([z,x,y]);
+  }
+  packing=true;packCancel=false;btn.textContent="Stop";btn.classList.add("on");
+  const total=jobs.length+2;let done=0,fail=0,bytes=0;
+  const show=()=>setStatus("SAVING "+done+"/"+total+" · "+(bytes/1048576).toFixed(1)+" MB"+(fail?" · "+fail+" FAILED":""));
+  // fonts for labels
+  for(const rng of ["0-255","256-511"]){
+    try{const b=await getGlyph("Noto Sans Regular/"+rng);bytes+=b.byteLength}catch(e){fail++}
+    done++;
+  }
+  show();
+  const worker=async()=>{
+    while(!packCancel&&jobs.length){
+      const [z,x,y]=jobs.shift(),k=z+"/"+x+"/"+y;
+      try{
+        if(!(await IDB.has(k))){const b=await getTile(z,x,y);bytes+=b.byteLength}
+      }catch(e){fail++}
+      done++;if(done%8===0)show();
+    }
+  };
+  await Promise.all([worker(),worker(),worker(),worker(),worker(),worker()]);
+  show();
+  const stopped=packCancel;
+  packing=false;packCancel=false;btn.textContent="Save";btn.classList.remove("on");
+  await updateLegend();
+  setStatus((stopped?"SAVE STOPPED · ":"AREA SAVED · ")+tilesSaved+" TILES STORED"+(fail?" · "+fail+" FAILED (RETRY)":""));
+}
+
+/* ---------- fullscreen (whole app, buttons + ticker stay) ---------- */
+const btnFull=$("btnFull");
+const isFS=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+async function toggleFull(){
+  const el=document.documentElement;
+  try{
+    if(!isFS()){
+      const f=el.requestFullscreen||el.webkitRequestFullscreen;
+      if(!f){setStatus("FULLSCREEN NOT SUPPORTED · TRY CHROME MENU > ADD TO HOME SCREEN");return}
+      await f.call(el,{navigationUI:"hide"});
+    }else{
+      const x=document.exitFullscreen||document.webkitExitFullscreen;
+      await x.call(document);
+    }
+  }catch(e){setStatus("FULLSCREEN BLOCKED BY BROWSER")}
+}
+function onFS(){
+  btnFull.textContent=isFS()?"Exit":"Full";
+  btnFull.classList.toggle("on",isFS());
+  setTimeout(()=>map&&map.resize(),200);
+}
+document.addEventListener("fullscreenchange",onFS);
+document.addEventListener("webkitfullscreenchange",onFS);
+
+/* ---------- controls ---------- */
+$("btnColor").onclick=()=>{pi=(pi+1)%PALETTES.length;applyPalette()};
+$("btnLoc").onclick=()=>{
+  follow=true;$("btnLoc").classList.add("on");
+  if(user.real)map.flyTo({center:[user.lon,user.lat],zoom:Math.max(map.getZoom(),14),bearing:0});
+  else{setStatus("LOCATING…");startGPS();map.flyTo({center:[user.lon,user.lat]})}
+};
+$("btnPack").onclick=packArea;
+btnFull.onclick=toggleFull;
+
+window.addEventListener("resize",()=>map&&map.resize());
+window.addEventListener("orientationchange",()=>setTimeout(()=>map&&map.resize(),300));
+if(window.ResizeObserver)new ResizeObserver(()=>map&&map.resize()).observe($("mapwrap"));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadWeather()});
+setInterval(loadWeather,600000);
+
+/* ---------- go ---------- */
+(async function(){
+  applyPalette();
+  await IDB.open();
+  await initTpl();
+  initMap();
+  applyPalette();
+  startGPS();
+  if(!TPL)setStatus(IDB.ok?"OFFLINE · USING SAVED TILES ONLY":"NO MAP DATA · CONNECT ONCE");
+  else setStatus("LOCATING…");
+  // if GPS never answers, still show weather for the default spot
+  setTimeout(()=>{if(!firstFix){firstFix=true;loadWeather()}},6000);
+})();
+})();
+</script>
+</body>
+</html>
