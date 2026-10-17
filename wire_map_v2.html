@@ -22,10 +22,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 #map{position:absolute;inset:0}
 #bar{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--minor)}
 button,select{background:transparent;color:var(--line);border:1px solid var(--line);
-  font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  font:inherit;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   padding:12px 2px;border-radius:2px;cursor:pointer;text-shadow:0 0 6px var(--line)}
 button{flex:1;min-width:0}
-select{flex:0 0 66px;background:var(--bg);text-shadow:none;padding:12px 0;text-align:center;
+select{flex:0 0 58px;background:var(--bg);text-shadow:none;padding:12px 0;text-align:center;
   -webkit-appearance:none;appearance:none}
 button:active{background:var(--line);color:var(--bg);text-shadow:none}
 button.on{background:var(--line);color:var(--bg);text-shadow:none}
@@ -47,6 +47,14 @@ button.on{background:var(--line);color:var(--bg);text-shadow:none}
 .me path{fill:var(--accent)}
 .me .ring{fill:none;stroke:var(--accent);stroke-width:1.5;opacity:.55;transform-origin:center;animation:ping 1.6s ease-out infinite}
 @keyframes ping{from{transform:scale(.6);opacity:.8}to{transform:scale(1.5);opacity:0}}
+#speed{position:absolute;left:14px;top:14px;z-index:4;touch-action:none;user-select:none;-webkit-user-select:none;
+  transform-origin:0 0;padding:4px 12px 22px 10px;background:rgba(0,0,0,.6);border:1px solid var(--line);
+  border-radius:2px;box-shadow:0 0 12px rgba(0,0,0,.6);cursor:grab;line-height:1}
+#spdNum{font-size:48px;font-weight:700;color:var(--line);text-shadow:0 0 10px var(--line);
+  min-width:3ch;text-align:right;font-variant-numeric:tabular-nums}
+#spdUnit{font-size:11px;letter-spacing:.25em;color:var(--accent);text-align:right;margin-top:3px}
+#spdHandle{position:absolute;left:0;bottom:0;width:22px;height:22px;
+  border-left:3px solid var(--accent);border-bottom:3px solid var(--accent);opacity:.9}
 @media (orientation:landscape) and (max-height:480px){
   #top{padding-top:3px;padding-bottom:3px}
   button,select{padding-top:7px;padding-bottom:7px}
@@ -66,10 +74,14 @@ button.on{background:var(--line);color:var(--bg);text-shadow:none}
     <div class="corner tl"></div><div class="corner tr"></div>
     <div class="corner bl"></div><div class="corner br"></div>
     <div id="legend"></div>
+    <div id="speed" title="Drag to move · pinch or drag the corner to resize · tap to switch units">
+      <div id="spdNum">--</div><div id="spdUnit">KM/H</div><div id="spdHandle"></div>
+    </div>
   </div>
   <div id="bar">
     <button id="btnColor">Colour</button>
     <button id="btnLoc">Locate</button>
+    <button id="btnNames">Names</button>
     <button id="btnPack">Save</button>
     <select id="packR" aria-label="Area to save">
       <option value="10">10km</option>
@@ -289,6 +301,7 @@ function initMap(){
 
   map.on("dragstart",()=>{follow=false;$("btnLoc").classList.remove("on")});
   map.on("moveend",updateLegend);
+  map.on("style.load",()=>applyNames(namesOn));
   map.on("click",e=>{            // no GPS? tap the map to say where you are
     if(user.real)return;
     user={lat:e.lngLat.lat,lon:e.lngLat.lng,real:false};
@@ -305,6 +318,12 @@ function initMap(){
 function onFix(p){
   const wasReal=user.real;
   user={lat:p.coords.latitude,lon:p.coords.longitude,real:true};
+  let v=p.coords.speed;
+  if((v==null||isNaN(v))&&lastFix){
+    const dt=(p.timestamp-lastFix.ts)/1000;
+    if(dt>0.2)v=hav(lastFix.lat,lastFix.lon,user.lat,user.lon)/dt;
+  }
+  lastFix={lat:user.lat,lon:user.lon,ts:p.timestamp,at:Date.now(),v:(v==null||isNaN(v))?null:v};
   if(typeof p.coords.heading==="number"&&!isNaN(p.coords.heading))marker.setRotation(p.coords.heading);
   marker.setLngLat([user.lon,user.lat]);
   if(!firstFix){
@@ -325,7 +344,7 @@ function noGPS(){
 function startGPS(){
   if(!navigator.geolocation){noGPS();return}
   if(watchId!==null)navigator.geolocation.clearWatch(watchId);
-  watchId=navigator.geolocation.watchPosition(onFix,noGPS,{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+  watchId=navigator.geolocation.watchPosition(onFix,noGPS,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
 }
 
 /* ---------- weather ---------- */
@@ -447,7 +466,103 @@ function onFS(){
 document.addEventListener("fullscreenchange",onFS);
 document.addEventListener("webkitfullscreenchange",onFS);
 
+/* ---------- street names ("paper map" mode) ---------- */
+let namesOn=ls.get("wm_names")==="1";
+const ALLN=["motorway","trunk","primary","secondary","tertiary","minor","service","track"];
+const MAINN=["motorway","trunk","primary","secondary","tertiary"];
+function applyNames(on){
+  $("btnNames").classList.toggle("on",on);
+  if(!map||!map.getLayer("road_names"))return;
+  try{
+    map.setFilter("road_names",["match",["get","class"],on?ALLN:MAINN,true,false]);
+    map.setLayerZoomRange("road_names",on?12:11,24);
+    map.setLayoutProperty("road_names","text-size",on?["interpolate",["linear"],["zoom"],12,9,17,13]:10);
+    map.setLayoutProperty("road_names","symbol-spacing",on?200:320);
+    CM.road_minor["line-color"]=on?"line":"minor";
+    CM.road_service["line-color"]=on?"line":"minor";
+    map.setPaintProperty("road_minor","line-opacity",on?.55:1);
+    map.setPaintProperty("road_service","line-opacity",on?.45:.8);
+    map.setLayerZoomRange("road_minor",on?10:11,24);
+    map.setLayerZoomRange("road_service",on?13:14,24);
+  }catch(e){}
+  applyPalette();
+}
+
+/* ---------- speed overlay (drag, pinch/corner-resize, tap = units) ---------- */
+let lastFix=null,spdUnit="kmh";
+const hav=(la1,lo1,la2,lo2)=>{
+  const R=6371000,r=Math.PI/180,dLa=(la2-la1)*r,dLo=(lo2-lo1)*r;
+  const a=Math.sin(dLa/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+};
+const spd=$("speed"),spdHandle=$("spdHandle");
+const S={l:14,t:14,s:1};
+try{const o=JSON.parse(ls.get("wm_spd"));if(o){S.l=+o.l||14;S.t=+o.t||14;S.s=+o.s||1;spdUnit=o.u==="mph"?"mph":"kmh"}}catch(e){}
+function spdSave(){ls.set("wm_spd",JSON.stringify({l:S.l,t:S.t,s:S.s,u:spdUnit}))}
+function spdPlace(){
+  const wr=$("mapwrap").getBoundingClientRect();
+  S.s=Math.min(3,Math.max(.5,S.s));
+  const w=spd.offsetWidth*S.s,h=spd.offsetHeight*S.s;
+  S.l=Math.max(0,Math.min(S.l,wr.width-w));
+  S.t=Math.max(0,Math.min(S.t,wr.height-h));
+  spd.style.left=S.l+"px";spd.style.top=S.t+"px";spd.style.transform="scale("+S.s+")";
+}
+function speedTick(){
+  const f=lastFix,num=$("spdNum"),unit=$("spdUnit");
+  unit.textContent=spdUnit==="mph"?"MPH":"KM/H";
+  if(!f||f.v===null||Date.now()-f.at>6000){num.textContent="--";return}
+  const v=f.v<0.5?0:f.v;
+  num.textContent=Math.round(spdUnit==="mph"?v*2.23694:v*3.6);
+}
+const ptrs=new Map();
+let drag=null,pinch=null,resize=null,moved=false,downAt=0;
+const two=()=>{const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1};
+spd.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  try{spd.setPointerCapture(e.pointerId)}catch(x){}
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(e.target===spdHandle){
+    const r=spd.getBoundingClientRect();           // scale from the overlay's top-left corner
+    resize={id:e.pointerId,ox:r.left,oy:r.top,d0:Math.hypot(e.clientX-r.left,e.clientY-r.top)||1,s0:S.s};
+    drag=null;pinch=null;
+  }else if(ptrs.size===1){
+    drag={x:e.clientX,y:e.clientY,l:S.l,t:S.t};moved=false;downAt=Date.now();
+  }else if(ptrs.size===2){
+    pinch={d0:two(),s0:S.s};drag=null;moved=true;
+  }
+});
+spd.addEventListener("pointermove",e=>{
+  if(!ptrs.has(e.pointerId))return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(resize&&resize.id===e.pointerId){
+    S.s=resize.s0*Math.hypot(e.clientX-resize.ox,e.clientY-resize.oy)/resize.d0;spdPlace();return;
+  }
+  if(pinch&&ptrs.size>=2){S.s=pinch.s0*two()/pinch.d0;spdPlace();return}
+  if(drag){
+    const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(Math.hypot(dx,dy)>6)moved=true;
+    S.l=drag.l+dx;S.t=drag.t+dy;spdPlace();
+  }
+});
+function spdUp(e){
+  const tap=!!drag&&!moved&&!resize&&!pinch&&(Date.now()-downAt<500)&&e.type==="pointerup";
+  ptrs.delete(e.pointerId);
+  if(resize&&resize.id===e.pointerId)resize=null;
+  if(ptrs.size<2)pinch=null;
+  if(ptrs.size===0)drag=null;
+  else if(ptrs.size===1&&!resize){const p=[...ptrs.values()][0];drag={x:p.x,y:p.y,l:S.l,t:S.t};moved=true}
+  if(tap){spdUnit=spdUnit==="kmh"?"mph":"kmh";speedTick()}
+  spdSave();
+}
+spd.addEventListener("pointerup",spdUp);
+spd.addEventListener("pointercancel",spdUp);
+if(window.ResizeObserver)new ResizeObserver(spdPlace).observe($("mapwrap"));
+spdPlace();setTimeout(spdPlace,300);
+speedTick();
+setInterval(speedTick,500);       // refresh readout twice a second from the latest GPS fix
+
 /* ---------- controls ---------- */
+$("btnNames").onclick=()=>{namesOn=!namesOn;ls.set("wm_names",namesOn?"1":"0");applyNames(namesOn)};
 $("btnColor").onclick=()=>{pi=(pi+1)%PALETTES.length;applyPalette()};
 $("btnLoc").onclick=()=>{
   follow=true;$("btnLoc").classList.add("on");
