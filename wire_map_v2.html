@@ -30,7 +30,7 @@ select{flex:0 0 58px;background:var(--bg);text-shadow:none;padding:12px 0;text-a
 button:active{background:var(--line);color:var(--bg);text-shadow:none}
 button.on{background:var(--line);color:var(--bg);text-shadow:none}
 #ticker{overflow:hidden;white-space:nowrap;border-top:1px solid var(--minor);
-  padding:7px 0 calc(7px + env(safe-area-inset-bottom));font-size:12px;
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom));font-size:24px;font-weight:700;line-height:1.2;
   letter-spacing:.08em;color:var(--accent);background:rgba(0,0,0,.35)}
 #tickInner{display:inline-block;padding-left:100%;animation:scroll 60s linear infinite;will-change:transform}
 @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
@@ -53,6 +53,13 @@ button.on{background:var(--line);color:var(--bg);text-shadow:none}
 #spdNum{font-size:48px;font-weight:700;color:var(--line);text-shadow:0 0 10px var(--line);
   min-width:3ch;text-align:right;font-variant-numeric:tabular-nums}
 #spdUnit{font-size:11px;letter-spacing:.25em;color:var(--accent);text-align:right;margin-top:3px}
+#spdTgt{margin-top:8px;padding-top:6px;border-top:1px solid var(--minor);text-align:right}
+#spdTgt[hidden]{display:none}
+#spdTgtLbl{font-size:9px;letter-spacing:.2em;color:var(--accent)}
+#spdTgtVal{font-size:26px;font-weight:700;color:var(--line);text-shadow:0 0 8px var(--line);
+  font-variant-numeric:tabular-nums;margin-top:3px}
+#spdTgtName{display:block;width:0;min-width:100%;margin-top:3px;font-size:10px;letter-spacing:.08em;opacity:.85;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #spdHandle{position:absolute;left:0;bottom:0;width:22px;height:22px;
   border-left:3px solid var(--accent);border-bottom:3px solid var(--accent);opacity:.9}
 .mini{flex:none;padding:7px 10px;font-size:11px}
@@ -90,7 +97,13 @@ button.on{background:var(--line);color:var(--bg);text-shadow:none}
     <div class="corner bl"></div><div class="corner br"></div>
     <div id="legend"></div>
     <div id="speed" title="Drag to move · pinch or drag the corner to resize · tap to switch units">
-      <div id="spdNum">--</div><div id="spdUnit">KM/H</div><div id="spdHandle"></div>
+      <div id="spdNum">--</div><div id="spdUnit">KM/H</div>
+      <div id="spdTgt" hidden>
+        <div id="spdTgtLbl">TARGET DISTANCE</div>
+        <div id="spdTgtVal">--</div>
+        <span id="spdTgtName"></span>
+      </div>
+      <div id="spdHandle"></div>
     </div>
     <div id="search" hidden>
       <div class="srow">
@@ -184,16 +197,26 @@ function buildStyle(pi){
 
   // search highlight: by road name in the vector tiles, and by GeoJSON from the online search
   const NONE=["any",["==",["get","name"],"\u0001none"],["==",["get","name:latin"],"\u0001none"]];
-  add({id:"hl_glow",type:"line",source:"om","source-layer":"transportation_name",layout:round,filter:NONE,
-       paint:{"line-color":p.accent,"line-opacity":.45,"line-blur":5,"line-width":W([[5,7],[14,16],[18,36]])}},{"line-color":"accent"});
-  add({id:"hl_line",type:"line",source:"om","source-layer":"transportation_name",layout:round,filter:NONE,
-       paint:{"line-color":p.accent,"line-width":W([[5,2.5],[14,5],[18,14]])}},{"line-color":"accent"});
+  const hid=Object.assign({visibility:"none"},round);   // hidden (and no extra tile loading) until a road is picked
+  add({id:"hl_glow",type:"line",source:"omh","source-layer":"transportation_name",layout:hid,filter:NONE,
+       paint:{"line-color":p.accent,"line-opacity":.45,"line-blur":5,"line-width":W([[3,10],[12,15],[14,18],[18,36]])}},{"line-color":"accent"});
+  add({id:"hl_line",type:"line",source:"omh","source-layer":"transportation_name",layout:hid,filter:NONE,
+       paint:{"line-color":p.accent,"line-width":W([[3,3],[12,4.5],[14,5.5],[18,14]])}},{"line-color":"accent"});
   add({id:"hlg_glow",type:"line",source:"hl",layout:round,filter:["!=",["geometry-type"],"Point"],
-       paint:{"line-color":p.accent,"line-opacity":.45,"line-blur":5,"line-width":W([[5,7],[14,16],[18,36]])}},{"line-color":"accent"});
+       paint:{"line-color":p.accent,"line-opacity":.45,"line-blur":5,"line-width":W([[3,10],[12,15],[14,18],[18,36]])}},{"line-color":"accent"});
   add({id:"hlg_line",type:"line",source:"hl",layout:round,filter:["!=",["geometry-type"],"Point"],
-       paint:{"line-color":p.accent,"line-width":W([[5,2.5],[14,5],[18,14]])}},{"line-color":"accent"});
+       paint:{"line-color":p.accent,"line-width":W([[3,3],[12,4.5],[14,5.5],[18,14]])}},{"line-color":"accent"});
   add({id:"hlg_pt",type:"circle",source:"hl",filter:["==",["geometry-type"],"Point"],
        paint:{"circle-color":p.accent,"circle-radius":8,"circle-stroke-color":p.bg,"circle-stroke-width":2}},
+      {"circle-color":"accent","circle-stroke-color":"bg"});
+  // beacon: pulsing ring on the nearest point of the road + dashed "crow flies" line from you
+  add({id:"hlb_line",type:"line",source:"hlb",filter:["==",["geometry-type"],"LineString"],layout:{"line-cap":"round"},
+       paint:{"line-color":p.accent,"line-width":1.6,"line-opacity":.85,"line-dasharray":[2,2]}},{"line-color":"accent"});
+  add({id:"hlb_ring",type:"circle",source:"hlb",filter:["==",["geometry-type"],"Point"],
+       paint:{"circle-radius":18,"circle-color":p.accent,"circle-opacity":0,"circle-stroke-color":p.accent,
+              "circle-stroke-width":3,"circle-stroke-opacity":.9}},{"circle-stroke-color":"accent","circle-color":"accent"});
+  add({id:"hlb_dot",type:"circle",source:"hlb",filter:["==",["geometry-type"],"Point"],
+       paint:{"circle-radius":5,"circle-color":p.accent,"circle-stroke-color":p.bg,"circle-stroke-width":2}},
       {"circle-color":"accent","circle-stroke-color":"bg"});
 
   add({id:"road_names",type:"symbol",source:"om","source-layer":"transportation_name",minzoom:11,
@@ -209,8 +232,8 @@ function buildStyle(pi){
                "text-transform":"uppercase","text-letter-spacing":.15,"text-max-width":8},
        paint:{"text-color":p.text,"text-halo-color":p.bg,"text-halo-width":1.6}},
       {"text-color":"text","text-halo-color":"bg"});
-  add({id:"hl_name",type:"symbol",source:"om","source-layer":"transportation_name",filter:NONE,
-       layout:{"symbol-placement":"line","text-field":name,"text-font":font,"text-size":13,
+  add({id:"hl_name",type:"symbol",source:"omh","source-layer":"transportation_name",filter:NONE,
+       layout:{"visibility":"none","symbol-placement":"line","text-field":name,"text-font":font,"text-size":13,
                "text-letter-spacing":.1,"text-transform":"uppercase","symbol-spacing":250,
                "text-allow-overlap":true,"text-ignore-placement":true},
        paint:{"text-color":p.accent,"text-halo-color":p.bg,"text-halo-width":2}},
@@ -220,7 +243,10 @@ function buildStyle(pi){
     version:8,
     glyphs:"wmg://{fontstack}/{range}",
     sources:{om:{type:"vector",tiles:["wm://{z}/{x}/{y}"],minzoom:0,maxzoom:14},
-             hl:{type:"geojson",data:{type:"FeatureCollection",features:[]}}},
+             // same tiles, but fetched one zoom level deeper so a highlighted road is complete when zoomed out
+             omh:{type:"vector",tiles:["wm://{z}/{x}/{y}"],minzoom:0,maxzoom:14},
+             hl:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
+             hlb:{type:"geojson",data:{type:"FeatureCollection",features:[]}}},
     layers:L
   };
 }
@@ -228,10 +254,13 @@ function buildStyle(pi){
 
 /* ---------- state ---------- */
 let pi=(+ls.get("wm_pal")||0)%PALETTES.length;
-const DEF={lat:-37.88,lon:147.98};   // Lakes Entrance
-let user={lat:DEF.lat,lon:DEF.lon,real:false};
+const HOME_Q="Bung Yarnda Court, Lakes Entrance VIC";
+let HOME={lat:-37.8806,lon:147.9811};   // Lakes Entrance town centre until the street has been looked up once
+try{const h=JSON.parse(ls.get("wm_home"));if(h&&isFinite(h.lat)&&isFinite(h.lon))HOME={lat:h.lat,lon:h.lon}}catch(e){}
+let user={lat:HOME.lat,lon:HOME.lon,real:false},userMoved=false;
+let tplFresh=false,TS={net:0,cache:0,empty:0,fail:0,last:""};
 let follow=true,firstFix=false,watchId=null,map=null,marker=null,TPL=null,tilesSaved=0;
-let lastErr="",errCount=0;
+let lastErr="",errCount=0;const errLog=[];
 const statusEl=$("status"),legend=$("legend"),tick=$("tickInner");
 const setStatus=t=>{statusEl.textContent=t};
 
@@ -252,6 +281,11 @@ const IDB={db:null,ok:false,
   put(k,v){return new Promise(res=>{if(!IDB.ok)return res();try{
     const tx=IDB.db.transaction("t","readwrite");tx.objectStore("t").put(v,k);
     tx.oncomplete=()=>res();tx.onerror=()=>res();tx.onabort=()=>res();}catch(e){res()}})},
+  purgeEmpty(){return new Promise(res=>{if(!IDB.ok)return res(0);try{   // remove empty tiles saved by older versions
+    const tx=IDB.db.transaction("t","readwrite"),st=tx.objectStore("t");let n=0;
+    st.openCursor().onsuccess=e=>{const c=e.target.result;if(!c)return;
+      if(c.value&&c.value.byteLength===0){c.delete();n++}c.continue()};
+    tx.oncomplete=()=>res(n);tx.onerror=()=>res(0);tx.onabort=()=>res(0);}catch(e){res(0)}})},
   count(){return new Promise(res=>{if(!IDB.ok)return res(0);try{
     const r=IDB.db.transaction("t").objectStore("t").count();
     r.onsuccess=()=>res(r.result);r.onerror=()=>res(0);}catch(e){res(0)}})}
@@ -263,8 +297,8 @@ async function fetchBuf(url,signal,ms){
   if(signal)signal.addEventListener("abort",()=>c.abort());
   try{
     const r=await fetch(url,{signal:c.signal});
-    if(r.status===404||r.status===204)return new ArrayBuffer(0); // empty tile (sea etc.)
-    if(!r.ok)throw new Error("HTTP "+r.status);
+    if(r.status===204)return new ArrayBuffer(0);
+    if(!r.ok){const er=new Error("HTTP "+r.status);er.status=r.status;throw er}
     return await r.arrayBuffer();
   }finally{clearTimeout(to)}
 }
@@ -272,23 +306,32 @@ async function initTpl(){
   try{
     const r=await fetch("https://tiles.openfreemap.org/planet",{signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined});
     const j=await r.json();
-    if(j.tiles&&j.tiles[0]){TPL=j.tiles[0];ls.set("wm_tpl",TPL)}
+    if(j.tiles&&j.tiles[0]){TPL=j.tiles[0];tplFresh=true;ls.set("wm_tpl",TPL)}
   }catch(e){}
   if(!TPL)TPL=ls.get("wm_tpl");
 }
 async function getTile(z,x,y,signal){
   const k=z+"/"+x+"/"+y;
   const hit=await IDB.get(k);
-  if(hit)return hit;
+  if(hit&&hit.byteLength>0){TS.cache++;return hit}
   if(!TPL)throw new Error("no tile source");
   let err;
   for(let i=0;i<2;i++){
     try{
       const buf=await fetchBuf(TPL.replace("{z}",z).replace("{x}",x).replace("{y}",y),signal);
+      if(buf.byteLength===0){TS.empty++;return buf}      // never store empty tiles
+      TS.net++;TS.last="OK "+buf.byteLength+"B";
       IDB.put(k,buf);                 // structured clone happens now, before MapLibre takes the buffer
       return buf;
-    }catch(e){err=e;if(signal&&signal.aborted)break}
+    }catch(e){
+      err=e;if(signal&&signal.aborted)break;
+      if(e.status===404){
+        if(!tplFresh){await initTpl();continue}           // saved tile address may be out of date: refresh and retry
+        TS.empty++;return new ArrayBuffer(0);              // genuinely empty tile (sea etc.), not stored
+      }
+    }
   }
+  TS.fail++;TS.last=String(err&&err.message||err).slice(0,20);
   throw err;
 }
 function glyphUrl(path){
@@ -318,8 +361,8 @@ function applyPalette(){
   for(const k of ["bg","line","minor","accent","text","grid"])r.setProperty("--"+k,p[k]);
   ls.set("wm_pal",pi);
   if(map){
-    for(const id in CM)for(const prop in CM[id]){
-      try{map.setPaintProperty(id,prop,p[CM[id][prop]])}catch(e){}
+    for(const id in CM){if(!map.getLayer(id))continue;for(const prop in CM[id]){
+      try{map.setPaintProperty(id,prop,p[CM[id][prop]])}catch(e){}}
     }
   }
   updateLegend();
@@ -336,9 +379,10 @@ async function updateLegend(){
       nd="<br>NAMES "+shown+" SHOWN · "+all.length+" IN TILES ("+minor+" MINOR)";
     }catch(e){nd="<br>NAMES CHECK FAILED"}
   }
-  const er=errCount?"<br>ERR "+errCount+": "+lastErr.slice(0,44):"";
+  const er=(errCount||errLog.length)?"<br>ERR "+errCount+errLog.map(m=>"<br>· "+m.slice(0,70)).join(""):"";
   legend.innerHTML=PALETTES[pi].n+" · Z"+z.toFixed(1)+" · "+c.lat.toFixed(3)+", "+c.lng.toFixed(3)
     +"<br>"+tilesSaved+" TILES STORED"+(IDB.ok?"":" (STORAGE OFF)")
+    +"<br>TILES NET "+TS.net+" · CACHE "+TS.cache+" · EMPTY "+TS.empty+" · FAIL "+TS.fail+(TS.last?" · "+TS.last:"")
     +nd+er
     +"<br>© OPENSTREETMAP · OPENFREEMAP";
 }
@@ -346,9 +390,11 @@ async function updateLegend(){
 /* ---------- map ---------- */
 function initMap(){
   map=new maplibregl.Map({
-    container:"map",style:buildStyle(pi),center:[user.lon,user.lat],zoom:13,maxZoom:18,minZoom:3,
+    container:"map",center:[user.lon,user.lat],zoom:15,maxZoom:18,minZoom:3,
     attributionControl:false,maxPitch:0,dragRotate:true,fadeDuration:150
   });
+  try{map.setStyle(buildStyle(pi),{validate:false})}catch(e){errLog.push("SETSTYLE "+e.message);map.setStyle(buildStyle(pi))}
+  setTimeout(()=>{ if(map&&!map.getLayer("road_main")){errLog.push("STYLE NOT LOADED");setStatus("MAP STYLE FAILED · SEE ERR LINES BELOW");updateLegend()} },5000);
   map.addControl(new maplibregl.NavigationControl({showZoom:false,visualizePitch:false}),"top-right");
 
   const el=document.createElement("div");el.className="me";
@@ -356,7 +402,7 @@ function initMap(){
   marker=new maplibregl.Marker({element:el,rotationAlignment:"map",pitchAlignment:"map"})
     .setLngLat([user.lon,user.lat]).addTo(map);
 
-  map.on("dragstart",()=>{follow=false;$("btnLoc").classList.remove("on")});
+  map.on("dragstart",()=>{follow=false;userMoved=true;$("btnLoc").classList.remove("on")});
   map.on("moveend",updateLegend);
   map.on("style.load",()=>applyNames(namesOn));
   map.on("click",e=>{            // no GPS? tap the map to say where you are
@@ -367,10 +413,12 @@ function initMap(){
     loadWeather();
   });
   map.on("error",e=>{
-    errCount++;lastErr=String((e&&e.error&&e.error.message)||(e&&e.message)||"unknown");
+    errCount++;lastErr=((e&&e.sourceId)?e.sourceId+": ":"")+String((e&&e.error&&e.error.message)||(e&&e.message)||"unknown");
+    if(errLog.indexOf(lastErr)<0&&errLog.length<4)errLog.push(lastErr);
     if(!TPL)setStatus("NO MAP DATA · CONNECT ONCE OR SAVE AN AREA");
   });
   map.on("idle",updateLegend);
+  map.on("idle",()=>{if(hlCurName)refreshLines();emptyCheck()});
 }
 
 /* ---------- GPS ---------- */
@@ -397,7 +445,7 @@ function onFix(p){
 }
 function noGPS(){
   if(user.real)return;
-  setStatus("NO GPS · TAP MAP TO SET LOCATION");
+  setStatus("NO GPS · SHOWING HOME STREET · TAP MAP TO MOVE YOU");
   if(!firstFix){firstFix=true;loadWeather()}
 }
 function startGPS(){
@@ -417,7 +465,7 @@ function setTick(txt){
   tick.textContent=txt;
   tick.style.animation="none";void tick.offsetWidth;
   tick.style.animation="";
-  tick.style.animationDuration=Math.max(40,txt.length*0.2)+"s";
+  tick.style.animationDuration=Math.max(80,txt.length*0.34)+"s";
 }
 async function loadWeather(){
   try{
@@ -460,13 +508,14 @@ async function loadWeather(){
 let packing=false,packCancel=false;
 const lon2x=(lon,z)=>Math.floor((lon+180)/360*(1<<z));
 const lat2y=(lat,z)=>{const r=lat*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*(1<<z))};
-async function packArea(){
+async function packArea(o){
   const btn=$("btnPack");
   if(packing){packCancel=true;return}
   if(!IDB.ok){setStatus("STORAGE BLOCKED · OPEN PAGE OVER HTTPS (GITHUB PAGES) TO SAVE MAPS");return}
   if(!TPL){setStatus("NO TILE SOURCE · CONNECT TO INTERNET FIRST");return}
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-  const c=map.getCenter(),R=+$("packR").value,maxZ=R>=50?13:14;
+  const auto=!!(o&&o.auto);                       // auto = background save of the home area
+  const c=auto?{lat:o.lat,lng:o.lon}:map.getCenter(),R=auto?o.R:+$("packR").value,maxZ=R>=50?13:14;
   const dLat=R/111.32,dLon=R/(111.32*Math.cos(c.lat*Math.PI/180));
   const jobs=[];
   for(let z=4;z<=maxZ;z++){
@@ -498,6 +547,7 @@ async function packArea(){
   const stopped=packCancel;
   packing=false;packCancel=false;btn.textContent="Save";btn.classList.remove("on");
   await updateLegend();
+  if(auto&&!stopped&&!fail)ls.set("wm_homepack","1");
   setStatus((stopped?"SAVE STOPPED · ":"AREA SAVED · ")+tilesSaved+" TILES STORED"+(fail?" · "+fail+" FAILED (RETRY)":""));
 }
 
@@ -624,19 +674,276 @@ setInterval(speedTick,500);       // refresh readout twice a second from the lat
 const sp=$("search"),qIn=$("q"),qList=$("qList");
 const CLSRANK={motorway:0,trunk:1,primary:2,secondary:3,tertiary:4,minor:5,service:6,track:7};
 const HLIDS=["hl_glow","hl_line","hl_name"];
-const hlFilter=n=>["any",["==",["get","name"],n],["==",["get","name:latin"],n]];
+const hlFilter=n=>["any",["==",["get","name"],n],["==",["get","name:latin"],n],["==",["get","name_en"],n]];
+let hlCurName="",hlTileName="",hlOnlineFeats=[],hlTraceFeats=[],hlLineMap=new Map(),pulseT=null,traceToken=0,beaconOn=false;
 const nameOf=f=>f.properties["name:latin"]||f.properties.name||"";
 let localRes=[],onlineRes=null,onlineMsg="";
 
 function hlClear(){
-  if(!map||!map.getLayer("hl_line"))return;
-  const none=hlFilter("\u0001none");
-  for(const id of HLIDS)map.setFilter(id,none);
-  try{map.getSource("hl").setData({type:"FeatureCollection",features:[]})}catch(e){}
+  traceToken++;
+  hlCurName="";hlTileName="";hlOnlineFeats=[];hlTraceFeats=[];hlLineMap=new Map();
+  pulseStop();
   $("btnSearch").classList.remove("on");
+  tgtTick();
+  if(!map||!map.getLayer("hl_line"))return;
+  for(const id of HLIDS)if(map.getLayer(id))map.setLayoutProperty(id,"visibility","none");
+  try{map.getSource("hl").setData({type:"FeatureCollection",features:[]})}catch(e){}
 }
-function hlName(n){for(const id of HLIDS)map.setFilter(id,hlFilter(n));$("btnSearch").classList.add("on")}
-function hlGeo(feats){map.getSource("hl").setData({type:"FeatureCollection",features:feats});$("btnSearch").classList.add("on")}
+function hlName(n){                       // label (and tile-based fallback highlight) by road name
+  hlCurName=hlTileName=n;
+  for(const id of HLIDS)if(map.getLayer(id)){map.setFilter(id,hlFilter(n));map.setLayoutProperty(id,"visibility","visible")}
+  $("btnSearch").classList.add("on");pulseStart();
+}
+function hlRender(){                      // draw all known geometry of the road, at every zoom level
+  try{map.getSource("hl").setData({type:"FeatureCollection",features:hlOnlineFeats.concat(hlTraceFeats)})}catch(e){}
+  $("btnSearch").classList.add("on");pulseStart();refreshLines();tgtTick();
+}
+function hlGeo(feats,label){hlOnlineFeats=feats;if(label)hlCurName=label;hlRender()}
+
+/* breathing glow + beacon ring that pulse so the road is easy to spot at any zoom */
+function pulseStart(){if(!pulseT)pulseT=setInterval(pulseTick,80)}
+function pulseStop(){clearInterval(pulseT);pulseT=null}
+function pulseTick(){
+  if(!map||document.hidden)return;
+  const k=(Math.sin(Date.now()/1000*2*Math.PI/1.5)+1)/2;      // 1.5 s cycle
+  const m=1+.8*k,w=["interpolate",["exponential",1.5],["zoom"],3,10*m,12,15*m,14,18*m,18,36*m];
+  for(const id of ["hl_glow","hlg_glow"]){
+    if(!map.getLayer(id))continue;
+    map.setPaintProperty(id,"line-opacity",.25+.65*k);
+    map.setPaintProperty(id,"line-width",w);
+  }
+  for(const id of ["hl_line","hlg_line"])if(map.getLayer(id))map.setPaintProperty(id,"line-opacity",.8+.2*k);
+  if(map.getLayer("hlg_pt"))map.setPaintProperty("hlg_pt","circle-radius",8+5*k);
+  if(map.getLayer("hlb_ring")){
+    map.setPaintProperty("hlb_ring","circle-radius",10+22*k);
+    map.setPaintProperty("hlb_ring","circle-stroke-opacity",1-.8*k);
+  }
+}
+
+//#PURE_START
+function geomLines(g,out){
+  if(!g)return;
+  const t=g.type,c=g.coordinates;
+  if(t==="Point")out.push([c]);
+  else if(t==="MultiPoint")c.forEach(p=>out.push([p]));
+  else if(t==="LineString")out.push(c);
+  else if(t==="MultiLineString")c.forEach(l=>out.push(l));
+  else if(t==="Polygon")c.forEach(l=>out.push(l));
+  else if(t==="MultiPolygon")c.forEach(p=>p.forEach(l=>out.push(l)));
+}
+/* nearest point (as the crow flies) on a set of lines, measured from ref {lat,lon} */
+function nearestOn(lines,ref){
+  const mLat=111320,mLon=111320*Math.cos(ref.lat*Math.PI/180);
+  let best=Infinity,nx=0,ny=0;
+  for(const ln of lines){
+    if(!ln||!ln.length)continue;
+    let ax=(ln[0][0]-ref.lon)*mLon,ay=(ln[0][1]-ref.lat)*mLat;
+    if(ln.length===1){const d=Math.hypot(ax,ay);if(d<best){best=d;nx=ax;ny=ay}continue}
+    for(let i=1;i<ln.length;i++){
+      const bx=(ln[i][0]-ref.lon)*mLon,by=(ln[i][1]-ref.lat)*mLat;
+      const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy;
+      let t=L?-(ax*dx+ay*dy)/L:0;t=t<0?0:t>1?1:t;
+      const px=ax+t*dx,py=ay+t*dy,d=Math.hypot(px,py);
+      if(d<best){best=d;nx=px;ny=py}
+      ax=bx;ay=by;
+    }
+  }
+  return isFinite(best)?{d:best,lon:ref.lon+nx/mLon,lat:ref.lat+ny/mLat}:null;
+}
+function fmtDist(d){return d<1000?Math.round(d)+" M":d<100000?(d/1000).toFixed(1)+" KM":Math.round(d/1000)+" KM"}
+
+/* minimal vector-tile reader: pulls the road-name lines out of a z14 tile */
+function mvtRoads(buf){
+  const u8=new Uint8Array(buf),dec=new TextDecoder();
+  let p=0;
+  function rd(){
+    let r=0,m=1,b;
+    do{b=u8[p++];if(b===undefined)throw new Error("eof");r+=(b&127)*m;m*=128}while(b&128);
+    return r;
+  }
+  function skip(wt){
+    if(wt===0)rd();else if(wt===1)p+=8;else if(wt===2){const l=rd();p+=l}else if(wt===5)p+=4;else throw new Error("bad wire type");
+  }
+  function readValue(s,e){
+    const save=p;p=s;let v="";
+    while(p<e){
+      const key=rd(),f=Math.floor(key/8),wt=key%8;
+      if(f===1&&wt===2){const l=rd();v=dec.decode(u8.subarray(p,p+l));p+=l}else skip(wt);
+    }
+    p=save;return v;
+  }
+  function readFeature(s,e,keys,vals){
+    const save=p;p=s;let type=0;const tags=[],geom=[];
+    while(p<e){
+      const key=rd(),f=Math.floor(key/8),wt=key%8;
+      if(f===2&&wt===2){const l=rd(),le=p+l;while(p<le)tags.push(rd())}
+      else if(f===3&&wt===0)type=rd();
+      else if(f===4&&wt===2){const l=rd(),le=p+l;while(p<le)geom.push(rd())}
+      else skip(wt);
+    }
+    p=save;
+    if(type!==2)return null;
+    const props={};
+    for(let i=0;i+1<tags.length;i+=2)props[keys[tags[i]]]=vals[tags[i+1]];
+    return {props:props,geom:geom};
+  }
+  function readLayer(lend){
+    let name="",extent=4096;const keys=[],vals=[],feats=[];
+    while(p<lend){
+      const key=rd(),f=Math.floor(key/8),wt=key%8;
+      if(wt===2){
+        const len=rd(),s=p,e=p+len;
+        if(f===1)name=dec.decode(u8.subarray(s,e));
+        else if(f===2)feats.push([s,e]);
+        else if(f===3)keys.push(dec.decode(u8.subarray(s,e)));
+        else if(f===4)vals.push(readValue(s,e));
+        p=e;
+      }else if(wt===0){const v=rd();if(f===5)extent=v}
+      else skip(wt);
+    }
+    if(name!=="transportation_name")return null;
+    const out=[];
+    for(const se of feats){const ft=readFeature(se[0],se[1],keys,vals);if(ft)out.push(ft)}
+    return {extent:extent,feats:out};
+  }
+  const res=[];
+  while(p<u8.length){
+    const key=rd(),f=Math.floor(key/8),wt=key%8;
+    if(f===3&&wt===2){const len=rd(),lend=p+len;const L=readLayer(lend);if(L)res.push(L);p=lend}
+    else skip(wt);
+  }
+  return res;
+}
+function mvtLines(geom){
+  const lines=[];let x=0,y=0,cur=null,i=0;
+  while(i<geom.length){
+    const c=geom[i++],cmd=c&7,n=c>>>3;
+    for(let k=0;k<n;k++){
+      if(cmd===7)continue;
+      const dx=geom[i++],dy=geom[i++];
+      x+=(dx>>>1)^-(dx&1);y+=(dy>>>1)^-(dy&1);
+      if(cmd===1){cur=[];lines.push(cur)}
+      if(cur)cur.push([x,y]);
+    }
+  }
+  return lines;
+}
+function tileToLL(z,X,Y,x,y,ext){
+  const n=Math.pow(2,z),lon=(X+x/ext)/n*360-180,r=Math.PI-2*Math.PI*(Y+y/ext)/n;
+  return [lon,180/Math.PI*Math.atan(.5*(Math.exp(r)-Math.exp(-r)))];
+}
+//#PURE_END
+
+function refreshLines(){                  // remember every piece of the road seen so far, so distance stays stable
+  const out=[];
+  for(const f of hlOnlineFeats)geomLines(f.geometry,out);
+  for(const f of hlTraceFeats)geomLines(f.geometry,out);
+  if(hlTileName&&map&&map.getSource("omh")){
+    try{for(const f of map.querySourceFeatures("omh",{sourceLayer:"transportation_name",filter:hlFilter(hlTileName)}))geomLines(f.geometry,out)}catch(e){}
+  }
+  for(const ln of out){
+    if(!ln||!ln.length)continue;
+    const a=ln[0],b=ln[ln.length-1];
+    const k=ln.length+"|"+a[0].toFixed(5)+","+a[1].toFixed(5)+"|"+b[0].toFixed(5)+","+b[1].toFixed(5);
+    if(!hlLineMap.has(k)&&hlLineMap.size<8000)hlLineMap.set(k,ln);
+  }
+}
+function tgtTick(){                       // speed-box target distance + beacon on the map
+  const box=$("spdTgt"),src=map&&map.getSource?map.getSource("hlb"):null;
+  if(!hlCurName){
+    if(!box.hidden){box.hidden=true;spdPlace()}
+    if(src&&beaconOn){try{src.setData({type:"FeatureCollection",features:[]})}catch(e){}beaconOn=false}
+    return;
+  }
+  const n=nearestOn(hlLineMap.values(),{lat:user.lat,lon:user.lon});
+  if(box.hidden){box.hidden=false;spdPlace()}
+  $("spdTgtName").textContent=hlCurName.toUpperCase();
+  $("spdTgtVal").textContent=!n?"--":(n.d<10000?Math.round(n.d)+" M":(n.d/1000).toFixed(1)+" KM");
+  if(src&&n){
+    try{src.setData({type:"FeatureCollection",features:[
+      {type:"Feature",properties:{},geometry:{type:"Point",coordinates:[n.lon,n.lat]}},
+      {type:"Feature",properties:{},geometry:{type:"LineString",coordinates:[[user.lon,user.lat],[n.lon,n.lat]]}}]})}catch(e){}
+    beaconOn=true;
+  }
+}
+
+/* follow the road from tile to tile (z14) to collect its whole length */
+async function traceRoad(name,seeds,tok){
+  const Z=14,want=name.toLowerCase().trim(),seen=new Set(),queue=[],lines=[];
+  const add=(X,Y)=>{
+    const n=Math.pow(2,Z);
+    if(X<0||Y<0||X>=n||Y>=n)return;
+    const k=X+"/"+Y;
+    if(seen.has(k)||seen.size>=80)return;
+    seen.add(k);queue.push([X,Y]);
+  };
+  for(const s of seeds)add(lon2x(s[0],Z),lat2y(s[1],Z));
+  while(queue.length){
+    if(tok!==traceToken)return null;
+    const batch=queue.splice(0,4);
+    await Promise.all(batch.map(async function(t){
+      const X=t[0],Y=t[1];
+      let buf;try{buf=await getTile(Z,X,Y)}catch(e){return}
+      if(!buf||!buf.byteLength)return;
+      let layers;try{layers=mvtRoads(buf)}catch(e){return}
+      for(const L of layers)for(const f of L.feats){
+        const pr=f.props;
+        const nm=[pr.name,pr["name:latin"],pr.name_en].map(v=>(v||"").toLowerCase().trim());
+        if(nm.indexOf(want)<0)continue;
+        const ext=L.extent;let W=false,E=false,N=false,S=false;
+        for(const ln of mvtLines(f.geom)){
+          for(const pt of ln){
+            if(pt[0]<=0)W=true;
+            if(pt[0]>=ext)E=true;
+            if(pt[1]<=0)N=true;
+            if(pt[1]>=ext)S=true;
+          }
+          lines.push(ln.map(pt=>tileToLL(Z,X,Y,pt[0],pt[1],ext)));
+        }
+        if(W)add(X-1,Y);
+        if(E)add(X+1,Y);
+        if(N)add(X,Y-1);
+        if(S)add(X,Y+1);
+      }
+    }));
+  }
+  return tok===traceToken?lines:null;
+}
+async function startTrace(name,seeds,refit){
+  const tok=++traceToken;
+  const lines=await traceRoad(name,seeds,tok);
+  if(tok!==traceToken||!hlCurName||!lines||!lines.length)return 0;
+  hlTraceFeats=lines.map(ln=>({type:"Feature",properties:{},geometry:{type:"LineString",coordinates:ln}}));
+  hlRender();
+  if(refit)fitFeats(hlOnlineFeats.concat(hlTraceFeats));
+  return lines.length;
+}
+function seedsFrom(geoms){
+  const out=[],seen=new Set();
+  for(const g of geoms){
+    const L=[];geomLines(g,L);
+    for(const ln of L){
+      if(!ln.length)continue;
+      for(const pt of [ln[0],ln[ln.length-1],ln[(ln.length/2)|0]]){
+        const k=lon2x(pt[0],14)+"/"+lat2y(pt[1],14);
+        if(!seen.has(k)&&out.length<30){seen.add(k);out.push(pt)}
+      }
+    }
+  }
+  return out;
+}
+async function supplementGeo(name){       // fallback if tile tracing found nothing: OpenStreetMap geometry
+  try{
+    const c=map.getCenter(),d=.25,vb=[c.lng-d,c.lat+d,c.lng+d,c.lat-d].join(",");
+    const r=await fetch("https://nominatim.openstreetmap.org/search?format=geojson&polygon_geojson=1&limit=40&dedupe=0&bounded=1&viewbox="+vb+"&q="+encodeURIComponent(name));
+    if(!r.ok)return;
+    const j=await r.json();
+    if(hlCurName!==name)return;
+    const fs=(j.features||[]).filter(f=>f.geometry&&/LineString/.test(f.geometry.type))
+      .map(f=>({type:"Feature",properties:{},geometry:f.geometry}));
+    if(fs.length)hlGeo(fs,name);
+  }catch(e){}
+}
 function extend(b,c){
   if(typeof c[0]==="number"){b[0]=Math.min(b[0],c[0]);b[1]=Math.min(b[1],c[1]);b[2]=Math.max(b[2],c[0]);b[3]=Math.max(b[3],c[1])}
   else for(const x of c)extend(b,x);
@@ -659,11 +966,15 @@ function localSearch(q){
     const e=seen.get(n)||{name:n,cls:f.properties["class"],feats:[]};
     e.feats.push(f);seen.set(n,e);
   }
-  const rank=c=>CLSRANK[c]===undefined?9:CLSRANK[c];
-  return [...seen.values()].sort((a,b)=>{
-    const as=a.name.toLowerCase().indexOf(ql)===0?0:1,bs=b.name.toLowerCase().indexOf(ql)===0?0:1;
-    return as-bs||rank(a.cls)-rank(b.cls)||a.name.localeCompare(b.name);
-  }).slice(0,8);
+  const ref={lat:user.lat,lon:user.lon},out=[];
+  for(const e of seen.values()){
+    const L=[];e.feats.forEach(f=>geomLines(f.geometry,L));
+    const nr=nearestOn(L,ref);
+    e.d=nr?nr.d:Infinity;
+    e.sub=(e.cls||"road").toUpperCase()+(isFinite(e.d)?" · "+fmtDist(e.d)+" AWAY":"");
+    out.push(e);
+  }
+  return out.sort((a,b)=>a.d-b.d).slice(0,8);      // nearest first
 }
 function mkItem(title,sub,fn){
   const d=document.createElement("div");d.className="qi";
@@ -675,14 +986,14 @@ function mkItem(title,sub,fn){
 function mkHead(t){const d=document.createElement("div");d.className="qh";d.textContent=t;return d}
 function renderList(){
   qList.textContent="";
-  qList.appendChild(mkHead("ON MAP"));
+  qList.appendChild(mkHead("ON MAP · NEAREST FIRST"));
   if(!localRes.length){
     const short=qIn.value.trim().length<2;
     qList.appendChild(mkItem(short?"TYPE A ROAD NAME":"NO MATCH ON SCREEN","TAP HERE OR PRESS GO TO SEARCH ONLINE",short?null:doOnline));
   }
-  for(const e of localRes)qList.appendChild(mkItem(e.name,(e.cls||"road").toUpperCase(),()=>pickLocal(e)));
+  for(const e of localRes)qList.appendChild(mkItem(e.name,e.sub,()=>pickLocal(e)));
   if(onlineMsg||onlineRes){
-    qList.appendChild(mkHead("ONLINE"));
+    qList.appendChild(mkHead("ONLINE · NEAREST FIRST"));
     if(onlineMsg)qList.appendChild(mkItem(onlineMsg,"",null));
     for(const g of onlineRes||[])qList.appendChild(mkItem(g.title,g.sub,()=>pickOnline(g)));
   }
@@ -690,55 +1001,76 @@ function renderList(){
 function pickLocal(e){
   hlClear();hlName(e.name);fitFeats(e.feats);closeSearch();
   setStatus("HIGHLIGHT · "+e.name.toUpperCase());
+  setTimeout(()=>{refreshLines();tgtTick()},700);
+  startTrace(e.name,seedsFrom(e.feats.map(f=>f.geometry)),true).then(n=>{if(!n)supplementGeo(e.name)});
 }
 function pickOnline(g){
   hlClear();
-  if(g.src==="ph"){
-    if(g.name)hlName(g.name);
-    hlGeo(g.feats);
-    if(g.extent&&g.extent.length===4){
-      follow=false;$("btnLoc").classList.remove("on");
-      map.fitBounds([[g.extent[0],g.extent[3]],[g.extent[2],g.extent[1]]],{padding:70,maxZoom:17,duration:800});
-    }else fitFeats(g.feats);
-  }else{hlGeo(g.feats);fitFeats(g.feats)}
+  if(g.road)hlName(g.title);
+  hlGeo(g.feats,g.title);
+  if(g.src==="ph"&&g.extent&&g.extent.length===4){
+    follow=false;$("btnLoc").classList.remove("on");
+    map.fitBounds([[g.extent[0],g.extent[3]],[g.extent[2],g.extent[1]]],{padding:70,maxZoom:17,duration:800});
+  }else fitFeats(g.feats);
   closeSearch();
   setStatus("HIGHLIGHT · "+g.title.toUpperCase());
+  if(g.road)startTrace(g.title,seedsFrom(g.feats.map(f=>f.geometry)),true);
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function nomSearch(q,ref,bounded){
+  const d=.7,vb=[ref.lon-d,ref.lat+d,ref.lon+d,ref.lat-d].join(",");
+  const r=await fetch("https://nominatim.openstreetmap.org/search?format=geojson&polygon_geojson=1&dedupe=0&limit="+(bounded?40:25)
+    +(bounded?"&bounded=1&viewbox="+vb:"")+"&q="+encodeURIComponent(q));
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const j=await r.json(),groups=new Map();
+  for(const f of j.features||[]){
+    if(!f.geometry)continue;
+    const p=f.properties||{},dn=p.display_name||p.name||q;
+    const g=groups.get(dn)||{src:"nom",title:p.name||dn.split(",")[0].trim(),
+      tail:dn.split(",").slice(1,3).join(",").trim(),road:p.category==="highway",feats:[]};
+    g.feats.push({type:"Feature",properties:{},geometry:f.geometry});
+    groups.set(dn,g);
+  }
+  const arr=[...groups.values()];
+  for(const g of arr){
+    const L=[];g.feats.forEach(f=>geomLines(f.geometry,L));
+    const nr=nearestOn(L,ref);
+    g.d=nr?nr.d:Infinity;
+    g.sub=(isFinite(g.d)?fmtDist(g.d)+" AWAY · ":"")+g.tail;
+  }
+  return arr.sort((a,b)=>a.d-b.d);
 }
 async function doOnline(){
   const q=qIn.value.trim();
   if(q.length<2)return;
   onlineRes=null;onlineMsg="SEARCHING…";renderList();
-  const c=map.getCenter(),d=.6,vb=[c.lng-d,c.lat+d,c.lng+d,c.lat-d].join(",");
-  let res=null;
+  const ref={lat:user.lat,lon:user.lon};
+  let res=null,msg="";
   try{
-    const r=await fetch("https://nominatim.openstreetmap.org/search?format=geojson&polygon_geojson=1&limit=30&dedupe=0&viewbox="+vb+"&q="+encodeURIComponent(q));
-    if(!r.ok)throw new Error("HTTP "+r.status);
-    const j=await r.json(),groups=new Map();
-    for(const f of j.features||[]){
-      if(!f.geometry)continue;
-      const dn=f.properties.display_name||f.properties.name||q;
-      const g=groups.get(dn)||{src:"nom",title:f.properties.name||dn.split(",")[0],
-        sub:dn.split(",").slice(1,4).join(",").trim(),feats:[]};
-      g.feats.push({type:"Feature",properties:{},geometry:f.geometry});
-      groups.set(dn,g);
+    res=await nomSearch(q,ref,true);                      // 1) close to you
+    if(!res.length){
+      onlineMsg="NOTHING WITHIN ~80 KM · WIDENING SEARCH…";renderList();
+      await sleep(1100);                                  // be polite to the free service
+      res=await nomSearch(q,ref,false);                   // 2) anywhere, still nearest first
+      msg="NOTHING NEARBY · NEAREST MATCHES ANYWHERE:";
     }
-    res=[...groups.values()].slice(0,8);
   }catch(e1){
     try{
-      const r=await fetch("https://photon.komoot.io/api/?limit=8&lat="+c.lat+"&lon="+c.lng+"&q="+encodeURIComponent(q));
+      const r=await fetch("https://photon.komoot.io/api/?limit=10&lat="+ref.lat+"&lon="+ref.lon+"&q="+encodeURIComponent(q));
       if(!r.ok)throw new Error("HTTP "+r.status);
       const j=await r.json();
       res=(j.features||[]).filter(f=>f.geometry).map(f=>{
-        const p=f.properties||{};
-        return {src:"ph",title:p.name||q,sub:[p.street,p.city||p.county,p.state].filter(Boolean).join(", "),
-          feats:[{type:"Feature",properties:{},geometry:f.geometry}],
-          name:p.osm_key==="highway"?p.name:null,extent:p.extent};
-      });
+        const p=f.properties||{},L=[];geomLines(f.geometry,L);
+        const nr=nearestOn(L,ref),d=nr?nr.d:Infinity;
+        const tail=[p.street,p.city||p.county,p.state].filter(Boolean).join(", ");
+        return {src:"ph",title:p.name||q,d:d,sub:(isFinite(d)?fmtDist(d)+" AWAY · ":"")+tail,
+          feats:[{type:"Feature",properties:{},geometry:f.geometry}],road:p.osm_key==="highway",extent:p.extent};
+      }).sort((a,b)=>a.d-b.d);
     }catch(e2){res=null}
   }
   if(res===null){onlineMsg="ONLINE SEARCH FAILED · CHECK CONNECTION";onlineRes=null}
   else if(!res.length){onlineMsg="NOTHING FOUND";onlineRes=null}
-  else{onlineMsg="";onlineRes=res}
+  else{onlineMsg=msg;onlineRes=res}
   renderList();
 }
 function openSearch(){sp.hidden=false;renderList();setTimeout(()=>qIn.focus(),60)}
@@ -763,13 +1095,15 @@ qIn.addEventListener("keydown",e=>{
   if(e.key==="Escape")closeSearch();
 });
 
+setInterval(tgtTick,1000);
+
 /* ---------- controls ---------- */
 $("btnNames").onclick=()=>{namesOn=!namesOn;ls.set("wm_names",namesOn?"1":"0");applyNames(namesOn)};
 $("btnColor").onclick=()=>{pi=(pi+1)%PALETTES.length;applyPalette()};
 $("btnLoc").onclick=()=>{
   follow=true;$("btnLoc").classList.add("on");
   if(user.real)map.flyTo({center:[user.lon,user.lat],zoom:Math.max(map.getZoom(),14),bearing:0});
-  else{setStatus("LOCATING…");startGPS();map.flyTo({center:[user.lon,user.lat]})}
+  else{setStatus("LOCATING…");startGPS();map.flyTo({center:[user.lon,user.lat],zoom:Math.max(map.getZoom(),14),bearing:0})}
 };
 $("btnPack").onclick=packArea;
 btnFull.onclick=toggleFull;
@@ -780,10 +1114,43 @@ if(window.ResizeObserver)new ResizeObserver(()=>map&&map.resize()).observe($("ma
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)loadWeather()});
 setInterval(loadWeather,600000);
 
+/* ---------- home street + blank-map explanation ---------- */
+function emptyCheck(){                    // black map? say why instead of leaving it blank
+  if(!map||map.isMoving()||map.getZoom()<11)return;
+  let n=0;
+  try{n=map.queryRenderedFeatures({layers:["road_main","road_secondary","road_tertiary","road_minor"]}).length}catch(e){return}
+  if(n===0)setStatus(navigator.onLine===false?"OFFLINE · NO SAVED MAP HERE · TAP SAVE WHEN ONLINE":"NO ROADS IN VIEW · ZOOM OUT OR TAP LOCATE");
+}
+async function resolveHome(){             // look the home street up once, then remember it
+  if(ls.get("wm_home"))return true;
+  try{
+    const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=au&q="+encodeURIComponent(HOME_Q));
+    const j=await r.json();
+    if(j&&j[0]){
+      const la=+j[0].lat,lo=+j[0].lon;
+      if(Math.hypot((la-HOME.lat)*111,(lo-HOME.lon)*88)<15){   // sanity check: must be near Lakes Entrance
+        HOME={lat:la,lon:lo};ls.set("wm_home",JSON.stringify(HOME));
+        if(!user.real){
+          user={lat:la,lon:lo,real:false};marker.setLngLat([lo,la]);
+          if(!userMoved)map.jumpTo({center:[lo,la],zoom:15});
+          loadWeather();
+        }
+        return true;
+      }
+    }
+  }catch(e){}
+  return false;
+}
+async function autoHomePack(){            // one-off 10 km save around home so the paper map works with no signal
+  if(ls.get("wm_homepack")||!IDB.ok||!TPL||packing)return;
+  await packArea({auto:true,lat:HOME.lat,lon:HOME.lon,R:10});
+}
+
 /* ---------- go ---------- */
 (async function(){
   applyPalette();
   await IDB.open();
+  await IDB.purgeEmpty();
   await initTpl();
   initMap();
   applyPalette();
@@ -792,6 +1159,7 @@ setInterval(loadWeather,600000);
   else setStatus("LOCATING…");
   // if GPS never answers, still show weather for the default spot
   setTimeout(()=>{if(!firstFix){firstFix=true;loadWeather()}},6000);
+  resolveHome().then(()=>setTimeout(autoHomePack,4000));
 })();
 })();
 </script>
