@@ -40,6 +40,27 @@
   #zoneFade i{font:700 clamp(12px,3.6vh,20px)/1 'Courier New',monospace;letter-spacing:.3em;color:#19f0ff;font-style:normal}
   html,body{background:#000}
   #stage.pre #c{visibility:hidden}
+  #how{background:#060816;z-index:62;padding:1.4vh 2vw;box-sizing:border-box;align-items:stretch}
+  #howIn{display:flex;flex-direction:column;width:min(98vw,1700px);height:100%;gap:.8vh;margin:0 auto}
+  #howHead{display:flex;justify-content:space-between;align-items:center;flex:0 0 auto}
+  #howHead b{color:#ffd86b;letter-spacing:.22em;font-size:clamp(12px,3.8vh,24px)}
+  #howHead .sbtn{padding:.6vh 1.6vh;font-size:clamp(11px,2.8vh,16px)}
+  #howCols{flex:1 1 auto;min-height:0;display:flex;gap:2.4vw}
+  .hcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:.55vh;overflow:hidden}
+  .hh{color:#8fa4c0;letter-spacing:.14em;font-size:2.3vh;border-bottom:1px solid rgba(143,164,192,.3);margin-top:.5vh}
+  .hr{display:flex;align-items:center;gap:1vw;font-size:2.65vh;line-height:1.15;color:#dfe8ff;min-width:0}
+  .hr canvas{width:8vh;height:6vh;flex:0 0 auto}
+  .hr b{color:#fff}.hr i{font-style:normal;color:#9db0d0}
+  .ht{font-size:2.55vh;line-height:1.2;color:#cfd9f0}.ht b{color:#ffe3a8}
+  .hgrid{display:grid;grid-template-columns:1fr 1fr;gap:.4vh 1vw}
+  .hgrid .hr canvas{width:5.2vh;height:4.2vh}
+  .kk{display:inline-block;border:1px solid rgba(255,227,168,.6);border-radius:4px;padding:0 .7vh;margin:0 .2vh;color:#ffe3a8;font-size:.92em}
+  #rot{position:fixed;inset:0;z-index:300;background:#05070f;display:none;flex-direction:column;align-items:center;justify-content:center;gap:28px;text-align:center}
+  #rot.on{display:flex}
+  #rot canvas{width:112px;height:176px;image-rendering:pixelated;animation:rotPhone 3.2s ease-in-out infinite}
+  #rot b{font:700 clamp(14px,4.4vw,22px)/1.4 'Courier New',monospace;letter-spacing:.18em;color:#19f0ff;text-shadow:0 0 12px #19f0ff;padding:0 24px}
+  @keyframes rotPhone{0%,18%{transform:rotate(0)}48%,78%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+  @media (hover:hover) and (pointer:fine){ #stage .btn{display:none!important} #stage.edit .btn{display:flex!important} }
   #coin{position:fixed;inset:-6px;background:#000;z-index:60;flex-direction:column;cursor:pointer;user-select:none;-webkit-user-select:none}
   #coin b{font:700 clamp(18px,6vh,40px)/1 'Courier New',monospace;letter-spacing:.3em;color:#19f0ff;text-shadow:0 0 14px #19f0ff,0 0 32px #0aa;animation:blink 1s steps(1) infinite}
   @keyframes blink{0%,60%{opacity:1}61%,100%{opacity:0}}
@@ -51,6 +72,7 @@
   #prev{height:clamp(80px,30vh,170px);width:auto;image-rendering:pixelated;margin-top:14px;position:relative;z-index:0}
   #ttl{position:relative;z-index:1}
   #who{font-size:12px;color:#8fa4c0;text-align:center;min-height:15px;margin-top:10px}
+  #goRow{display:flex;gap:8px;align-items:stretch} #goRow #go{flex:1 1 auto} #howBtn{display:flex;align-items:center;font-size:clamp(11px,3vh,15px)}
   #panel{display:flex;flex-direction:column;gap:5px;flex:1 1 auto;min-width:0}
   .lbl{font-size:12px;color:#8fa4c0;letter-spacing:.1em}
   .lbl b{color:#fff;margin-left:6px}
@@ -86,6 +108,7 @@
 </style>
 </head>
 <body>
+<div id="rot"><canvas id="rotCv" width="28" height="44"></canvas><b>TURN YOUR PHONE<br>TO LANDSCAPE</b></div>
 <div id="stage" class="pre">
   <canvas id="c"></canvas>
   <div class="btn" id="left">&#9664;</div>
@@ -117,6 +140,11 @@
     <div class="sbtn pri" id="aboutClose">CLOSE</div>
   </div></div>
 
+  <div id="how" class="ov hide"><div id="howIn">
+    <div id="howHead"><b>HOW TO PLAY</b><div class="sbtn pri" id="howExit">&#10005; EXIT</div></div>
+    <div id="howCols"><div class="hcol" id="howL"></div><div class="hcol" id="howR"></div></div>
+  </div></div>
+
   <div id="ctlBar"><span id="ctlName">tap a button</span><input id="ctlSize" type="range" min="50" max="220" value="100"><div class="sbtn" id="ctlReset">RESET</div><div class="sbtn pri" id="ctlDone">DONE</div></div>
 
   <div id="menu" class="ov hide">
@@ -130,8 +158,8 @@
         <div class="lbl">ROBE COLOUR <b id="bodyName"></b></div><div class="strip" id="bodyStrip"></div>
         <div class="lbl">HAT COLOUR <b id="hatName"></b></div><div class="strip" id="hatStrip"></div>
         <div class="lbl">FAMILIAR <b id="famName"></b></div><div class="strip" id="famStrip"></div>
-        <div class="sbtn pri" id="go">&#9654; START</div>
-        <div id="hint">&#9664; &#9654; move &middot; JUMP (hold = higher, tap again in air = double jump) &middot; FIRE casts &middot; grab coloured orbs to change spell &middot; purple orb = shield &middot; best in landscape</div>
+        <div id="goRow"><div class="sbtn" id="howBtn">? HOW TO PLAY</div><div class="sbtn pri" id="go">&#9654; START</div></div>
+        <div id="hint">&#9664; &#9654; / A D move &middot; JUMP: Space or Shift (hold = higher, tap again in air = double jump) &middot; FIRE: Ctrl casts &middot; grab coloured orbs to change spell &middot; purple orb = shield &middot; best in landscape</div>
       </div>
     </div>
   </div>
@@ -704,7 +732,7 @@ function bind(id,key){
   el.addEventListener('contextmenu',e=>e.preventDefault());
 }
 ['left','right','jump','fire'].forEach(k=>bind(k,k));
-const KMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',KeyF:'fire',KeyK:'fire',ShiftLeft:'fire',ShiftRight:'fire'};
+const KMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',ShiftLeft:'jump',ShiftRight:'jump',ControlLeft:'fire',ControlRight:'fire',KeyF:'fire',KeyK:'fire'};
 function goFull(){
   try{
     const f=stage.requestFullscreen||stage.webkitRequestFullscreen;
@@ -712,12 +740,23 @@ function goFull(){
   }catch(e){}
   try{ if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
 }
+(function(){ const g=$('rotCv').getContext('2d'), R=(c,x,y,w,h)=>{ g.fillStyle=c; g.fillRect(x,y,w,h); };
+  R('#0b0f20',2,0,24,44); R('#0b0f20',0,2,28,40); R('#9aa4d0',2,1,24,42); R('#9aa4d0',1,2,26,40); R('#2a3050',3,3,22,38);
+  g.save(); g.translate(14,22); g.rotate(Math.PI/2); g.beginPath(); g.rect(-16,-10,32,20); g.clip();   // the game screen is drawn landscape, so it reads upright once the phone turns
+  R('#162a60',-16,-10,32,20); R('#cfe8ff',-12,-7,1,1); R('#cfe8ff',-3,-8,1,1); R('#cfe8ff',9,-6,1,1); R('#cfe8ff',13,-2,1,1);
+  R('#2f7a3a',-16,5,32,5); R('#4fc04f',-16,5,32,1); R('#1f4a28',6,6,5,4);
+  R('#ffcc33',-8,-1,6,6); R('#6a38c8',-9,-4,8,3); R('#6a38c8',-7,-7,4,3); R('#fff',-6,1,1,2); R('#fff',-3,1,1,2); R('#8a5a2b',1,0,5,4); g.restore();
+  R('#0b0f20',10,3,8,1); R('#5a6490',12,40,4,1); })();
+function chkRot(){ try{ const portrait=innerHeight>innerWidth&&matchMedia('(pointer:coarse)').matches; $('rot').classList.toggle('on',portrait);
+  if(portrait&&state==='play'&&!paused) setPause(true); }catch(e){} }
+for(const ev of ['resize','orientationchange']) addEventListener(ev,()=>{ chkRot(); setTimeout(chkRot,150); setTimeout(chkRot,600); });
 function refit(){ try{ const s=$('stage'); s.style.height=innerHeight+'px'; s.style.width=innerWidth+'px'; for(const id of ['title','menu','over','pauseOv','about']){ const o=$(id); if(o){ o.scrollTop=0; o.scrollLeft=0; } } window.scrollTo(0,0); }catch(e){} }
 for(const ev of ['resize','orientationchange']) addEventListener(ev,()=>{ refit(); setTimeout(refit,120); setTimeout(refit,500); });
 if(window.visualViewport) visualViewport.addEventListener('resize',()=>{ refit(); setTimeout(refit,200); });
 // every key press / tap re-requests fullscreen (and wakes audio) in case it dropped out
 ['keydown','pointerup','touchend','click'].forEach(ev=>addEventListener(ev,()=>{ audioInit(); goFull(); },{capture:true,passive:true}));
 addEventListener('keydown',e=>{
+  if(howOpen){ if(e.code==='Escape'||e.code==='Enter'||e.code==='Space'){ e.preventDefault(); closeHow(); } return; }
   if(e.code==='Escape'||e.code==='KeyP'){ if(state==='play') setPause(!paused); return; }
   if(e.code==='KeyM'){ toggleMute(); return; }
   if(state==='attract'){ e.preventDefault(); endAttract(); return; }
@@ -737,6 +776,7 @@ addEventListener('keyup',e=>{ const k=KMAP[e.code]; if(k) keys[k]=false; });
 document.addEventListener('fullscreenchange',()=>{ if(!document.fullscreenElement && state==='play' && !paused) setPause(true); });
 document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(state==='play'&&!paused) setPause(true); if(Aud.ctx) Aud.ctx.suspend(); } else if(Aud.ctx) Aud.ctx.resume(); });
 let paused=false;
+setTimeout(chkRot,0);
 function setPause(v){
   paused=v; $('pauseOv').classList.toggle('hide',!v);
   for(const k in keys) keys[k]=false; for(const k in btn){ btn[k]=false; $(k).classList.remove('on'); }
@@ -2073,7 +2113,72 @@ function drawPreview(dt){
 // ================= loop =================
 let last=performance.now();
 function tickBlink(dt){ p.blinkIn-=dt; if(p.blinkIn<=0){ p.blinkT=.13; p.blinkIn=rnd(1.8,4.5); } p.blinkT-=dt; }
+// ---- how to play ----
+const howIcons=[]; let howOpen=false;
+const HOWC=(g,x,y,rx,ry,c)=>{ g.fillStyle=c; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,6.283); g.fill(); };
+const HOWI={
+  walker(g,t){ const st=Math.floor(t*8)%2, x=12, y=9, f=Math.sin(t*.7)>0?1:-1; g.fillStyle='#4a1030'; g.fillRect(x+3,y+17+st,5,3); g.fillRect(x+16,y+17+(1-st),5,3);
+    g.fillStyle='#c2406b'; g.beginPath(); g.moveTo(x,y+18); g.quadraticCurveTo(x+1,y,x+12,y); g.quadraticCurveTo(x+23,y,x+24,y+18); g.closePath(); g.fill();
+    g.fillStyle='#e6799a'; g.fillRect(x+6,y+3,8,3); g.fillStyle='#fff'; g.fillRect(x+(f>0?12:4),y+6,6,6); g.fillRect(x+(f>0?4:12),y+6,6,6); g.fillStyle='#1a0610'; g.fillRect(x+(f>0?15:4),y+8,3,3); g.fillRect(x+7,y+8,3,3); },
+  bat(g,t){ const fl=Math.sin(t*16)*6, x=9, y=12; g.fillStyle='#4a2a82'; g.beginPath(); g.moveTo(x+13,y+8); g.lineTo(x-4,y+2+fl); g.lineTo(x+2,y+12); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(x+13,y+8); g.lineTo(x+30,y+2+fl); g.lineTo(x+24,y+12); g.closePath(); g.fill();
+    g.fillStyle='#2a1654'; g.beginPath(); g.ellipse(x+13,y+9,8,7,0,0,6.283); g.fill(); g.fillRect(x+7,y,3,4); g.fillRect(x+16,y,3,4); g.fillStyle='#ffdf5a'; g.fillRect(x+9,y+7,3,3); g.fillRect(x+15,y+7,3,3); },
+  blob(g,t){ const sq=Math.sin(t*4)*.07, w=28*(1+sq), h=24*(1-sq), bx=24, by=32, look=Math.sin(t*1.3);
+    HOWC(g,bx,by-h*.5,w*.5+1.5,h*.5+1.5,'#2a8a1c'); HOWC(g,bx,by-h*.52,w*.5,h*.5,'#4fd13a'); g.fillStyle='rgba(255,255,255,.5)'; g.beginPath(); g.ellipse(bx-w*.18,by-h*.8,w*.14,h*.1,-.5,0,6.283); g.fill();
+    for(const dx of [-.2,.2]){ HOWC(g,bx+w*dx,by-h*.58,4.2,4.2,'#fff'); HOWC(g,bx+w*dx+look*1.6,by-h*.56,2,2,'#111'); } g.fillStyle='#1a5a10'; g.fillRect(bx-3,by-h*.3,6,1.5); },
+  boss(g,t){ const c=BCOL[BCOLS[Math.floor(t*.9)%7]], sq=Math.sin(t*3)*.05, w=36*(1+sq), h=26*(1-sq), bx=24, by=33;
+    HOWC(g,bx,by-h*.5,w*.5+2,h*.5+2,c[1]); HOWC(g,bx,by-h*.52,w*.5,h*.5,c[0]); g.fillStyle='rgba(255,255,255,.4)'; g.beginPath(); g.ellipse(bx-w*.22,by-h*.8,w*.14,h*.09,-.5,0,6.283); g.fill();
+    g.fillStyle='#ffcc33'; g.beginPath(); g.moveTo(bx-9,by-h*.9); g.lineTo(bx-9,by-h-5); g.lineTo(bx-4,by-h*1.0); g.lineTo(bx,by-h-7); g.lineTo(bx+4,by-h*1.0); g.lineTo(bx+9,by-h-5); g.lineTo(bx+9,by-h*.9); g.closePath(); g.fill();
+    g.fillStyle='#fff'; g.fillRect(bx-9,by-h*.62,6,5); g.fillRect(bx+3,by-h*.62,6,5); g.fillStyle='#200'; g.fillRect(bx-6,by-h*.6,3,4); g.fillRect(bx+3,by-h*.6,3,4); },
+  coin(g,t){ const wd=Math.abs(Math.cos(t*4))*6+1.5; HOWC(g,24,18,wd+1.5,9.5,'#b8860b'); HOWC(g,24,18,wd,8,'#ffd43b'); },
+  gem(g,t){ const col=WCOL[['red','green','blue'][Math.floor(t*.8)%3]], x=24, y=18, wd=Math.abs(Math.cos(t*2.6))*7+1.5; g.fillStyle=col; g.beginPath(); g.moveTo(x,y-11); g.lineTo(x+wd,y-3); g.lineTo(x+wd*.7,y+7); g.lineTo(x,y+11); g.lineTo(x-wd*.7,y+7); g.lineTo(x-wd,y-3); g.closePath(); g.fill();
+    g.fillStyle='rgba(255,255,255,.55)'; g.beginPath(); g.moveTo(x,y-11); g.lineTo(x+wd,y-3); g.lineTo(x,y); g.lineTo(x-wd*.5,y-4); g.closePath(); g.fill(); },
+  heart(g,t){ const s=13+Math.sin(t*5)*1.4, x=24, y=19; g.beginPath(); g.moveTo(x,y+s*.35); g.bezierCurveTo(x-s*.9,y-s*.15,x-s*.5,y-s*.75,x,y-s*.3); g.bezierCurveTo(x+s*.5,y-s*.75,x+s*.9,y-s*.15,x,y+s*.35); g.closePath();
+    g.fillStyle='#ff3d6e'; g.fill(); g.lineWidth=1.5; g.strokeStyle='#7a0f2c'; g.stroke(); g.fillStyle='rgba(255,255,255,.75)'; g.fillRect(x-s*.5,y-s*.35,3,3); },
+  orb(g,t,k){ const col=WCOL[k], gk=k==='shield'?'purple':k, x=24, y=18; g.globalCompositeOperation='lighter'; g.globalAlpha=.8; g.drawImage(glows[gk],x-22,y-22,44,44); g.globalAlpha=1; g.globalCompositeOperation='source-over';
+    g.strokeStyle=col; g.lineWidth=1.5; g.beginPath(); g.ellipse(x,y,12,4.5,t*3,0,6.283); g.stroke(); HOWC(g,x,y,7,7,col); g.strokeStyle='#fff'; g.lineWidth=1.2; g.beginPath(); g.arc(x,y,7,0,6.283); g.stroke();
+    if(k==='shield'){ g.fillStyle='#fff'; g.beginPath(); g.moveTo(x-3.6,y-3.2); g.lineTo(x+3.6,y-3.2); g.lineTo(x+3.6,y+.5); g.quadraticCurveTo(x+3,y+3,x,y+4.3); g.quadraticCurveTo(x-3,y+3,x-3.6,y+.5); g.closePath(); g.fill(); } else { g.fillStyle='rgba(255,255,255,.85)'; g.fillRect(x-3,y-4,3,3); } },
+  fam(g,t,k){ if(k===2) drawFam(g,2,24,31,1,t,{walk:true}); else drawFam(g,k,24,18,1,t,{charge:k===1&&Math.sin(t*.9)>.82}); }
+};
+function howRow(par,ic,arg,html){ const r=document.createElement('div'); r.className='hr'; const c=document.createElement('canvas'); c.width=48; c.height=36; r.appendChild(c);
+  const d=document.createElement('div'); d.innerHTML=html; r.appendChild(d); par.appendChild(r); howIcons.push({g:c.getContext('2d'),ic,arg}); }
+function howHead(par,txt){ const h=document.createElement('div'); h.className='hh'; h.textContent=txt; par.appendChild(h); }
+function howTxt(par,html){ const d=document.createElement('div'); d.className='ht'; d.innerHTML=html; par.appendChild(d); }
+(function buildHow(){
+  const L=$('howL'), R=$('howR'), K=s=>'<span class="kk">'+s+'</span>';
+  howHead(L,'ENEMIES');
+  howRow(L,'walker',0,'<b>Pink Walker</b> &middot; 50 pts<br><i>patrols the ground</i>');
+  howRow(L,'bat',0,'<b>Bat</b> &middot; 50 pts<br><i>swoops through caves and sky</i>');
+  howRow(L,'blob',0,'<b>Green Blob</b> &middot; 100 pts<br><i>hops about</i>');
+  howRow(L,'boss',0,'<b>King Blob</b> &middot; 1500 pts<br><i>seven colours, each with its own spell. Tougher every zone</i>');
+  howHead(L,'DANGER');
+  howTxt(L,'Touching an enemy <b>&minus;20 HP</b>. Falling in a hole or water <b>&minus;25 HP</b> and your spells reset to fireball.');
+  howHead(L,'CONTROLS');
+  howTxt(L,'<b>Keyboard</b> &nbsp;'+K('A')+K('D')+' or '+K('&larr;')+K('&rarr;')+' move');
+  howTxt(L,K('Space')+' or '+K('Shift')+' jump &middot; hold = higher, tap again in the air = double jump');
+  howTxt(L,K('Ctrl')+' fire &nbsp;&middot;&nbsp; '+K('P')+' / '+K('Esc')+' pause &nbsp;&middot;&nbsp; '+K('M')+' mute');
+  howTxt(L,'<b>Touch</b> &nbsp;on-screen &#9664; &#9654; JUMP and FIRE buttons');
+  howHead(R,'PICKUPS');
+  howRow(R,'coin',0,'<b>Coin</b> &middot; +10 pts');
+  howRow(R,'gem',0,'<b>Gem</b> &middot; +50 pts');
+  howRow(R,'heart',0,'<b>Heart</b> &middot; +25 HP');
+  howHead(R,'SPELL ORBS - grab several and they fire together');
+  const g=document.createElement('div'); g.className='hgrid'; R.appendChild(g);
+  [['red','<b>Red</b> <i>pierce &times;3</i>'],['green','<b>Green</b> <i>burst</i>'],['blue','<b>Blue</b> <i>arc</i>'],['pink','<b>Pink</b> <i>looper</i>'],['cyan','<b>Cyan</b> <i>frag mortar</i>'],['yellow','<b>Yellow</b> <i>dagger ring 20s</i>'],['shield','<b>Purple</b> <i>shield, 3 hits</i>']].forEach(o=>howRow(g,'orb',o[0],o[1]));
+  howHead(R,'FAMILIARS - pick one on the character screen');
+  howRow(R,'fam',1,'<b>Charlie</b> the owl <i>red laser every 5s</i>');
+  howRow(R,'fam',2,'<b>Barry</b> the lizard <i>collects ground coins</i>');
+  howRow(R,'fam',3,'<b>Fairy</b> <i>heals 5 HP every 5.2s</i>');
+  howHead(R,'GOAL');
+  howTxt(R,'Beat the King Blob to clear the zone: full HP, spells kept. Caves hide in later zones.');
+})();
+function drawHow(){ for(const o of howIcons){ const g=o.g; g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,48,36); g.save(); HOWI[o.ic](g,time,o.arg); g.restore(); g.globalAlpha=1; g.globalCompositeOperation='source-over'; } }
+function openHow(){ howOpen=true; $('how').classList.remove('hide'); }
+function closeHow(){ howOpen=false; $('how').classList.add('hide'); }
+$('howBtn').addEventListener('click',e=>{ e.stopPropagation(); SFX.pick&&SFX.pick(); openHow(); });
+$('howExit').addEventListener('click',e=>{ e.stopPropagation(); closeHow(); });
 function frame(now){
+  if(howOpen) drawHow();
   const dt=Math.min(.033,(now-last)/1000); last=now; tickBlink(dt);
   if(state==='play'){ if(!paused&&!zoneBusy) update(dt); }
   else if(state==='attract'){ attractT+=dt; botDrive(dt); update(dt*.5); drawPreview(dt); if(attractT>50) endAttract(); }
