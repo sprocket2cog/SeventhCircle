@@ -332,7 +332,7 @@ button.ico svg{display:block;filter:drop-shadow(0 0 3px currentColor)}
 <h2>OFFLINE AND SAVED MAPS</h2>
 <ul>
 <li><b>Map: saved only</b> (View tab, on by default): never downloads tiles for the view, so the map is instant. Unsaved ground shows a rough stand-in. Switch to <b>online + saved</b> to fetch new ground.</li>
-<li>First run saves 10 km around home and the world at low zoom. <b>Save</b> adds more. Terrain heights are saved with it.</li>
+<li>First run saves 10 km around where you first get a GPS lock, and the world at low zoom. <b>Save</b> adds more. Terrain heights are saved with it.</li>
 <li>Saves also keep the speed limits for the area (up to about 150 blocks of 4 x 5 km), so the circle works with no signal.</li>
 <li><b>Save at arrow / pin / all pins / route:</b> in the Save tab. Save a distant town by dropping a pin there first.</li>
 </ul>
@@ -841,10 +841,10 @@ function buildStyle(pi){
 
 /* ---------- state ---------- */
 let pi=(+ls.get("wm_pal")||0)%PALETTES.length;
-const HOME_Q="Bung Yarnda Court, Lakes Entrance VIC";
-let HOME={lat:-37.8806,lon:147.9811};   // Lakes Entrance town centre until the street has been looked up once
+let HOME=null;                          // where you first get a GPS lock; kept only on this phone, never in the file
 try{const h=JSON.parse(ls.get("wm_home"));if(h&&isFinite(h.lat)&&isFinite(h.lon))HOME={lat:h.lat,lon:h.lon}}catch(e){}
-let user={lat:HOME.lat,lon:HOME.lon,real:false},userMoved=false;
+const POLE={lat:85,lon:0};          // no GPS lock yet: the marker waits at the North Pole (the map cannot go closer than 85°)
+let user={lat:POLE.lat,lon:POLE.lon,real:false},userMoved=false;
 let vmode=ls.get("wm_vmode");if(vmode!=="ter"&&vmode!=="none")vmode="bld";
 let tplFresh=false,TS={net:0,cache:0,empty:0,fail:0,synth:0,last:"",rdN:0,rdSum:0,rdMax:0,wr:0,wrMax:0};
 const PERF={n:0,sum:0,max:0,slow:0,err:0,mem:0,lastSlow:"",lastErr:""},TCACHE=new Map();
@@ -860,7 +860,7 @@ let lastErr="",errCount=0;const errLog=[];
 const statusEl=$("status"),legend=$("legend"),tick=$("tickInner");
 document.addEventListener("contextmenu",e=>{if(!/^(TEXTAREA|INPUT)$/.test(e.target.tagName))e.preventDefault()},true);
 document.addEventListener("selectstart",e=>{if(!/^(TEXTAREA|INPUT)$/.test((e.target.tagName||(e.target.parentNode&&e.target.parentNode.tagName)||"")))e.preventDefault()},true);
-const BUILD="2026-10-22 hazards1";
+const BUILD="2026-10-23 pole2";
 window.__wmTest={};
 const DBG=[],DBGN={t:0,last:""};
 function dbg(tag,msg){const d=new Date();DBG.push(d.toTimeString().slice(0,8)+" "+tag+" "+msg);if(DBG.length>500)DBG.shift()}
@@ -2083,7 +2083,7 @@ function pstLine(){const mb=n=>(n/1048576).toFixed(0)+" MB";return "storage: "+(
 /* ---------- map ---------- */
 function initMap(){
   map=new maplibregl.Map({
-    container:"map",center:[user.lon,user.lat],zoom:15,maxZoom:18,minZoom:1,
+    container:"map",center:[user.lon,user.lat],zoom:user.real?15:4,maxZoom:18,minZoom:1,
     attributionControl:false,maxPitch:70,pitchWithRotate:true,dragRotate:true,fadeDuration:0,crossSourceCollisions:false,refreshExpiredTiles:false,maxTileCacheSize:300
   });
   try{map.setStyle(buildStyle(pi),{validate:false})}catch(e){errLog.push("SETSTYLE "+e.message);map.setStyle(buildStyle(pi))}
@@ -2266,7 +2266,7 @@ window.__followGuard=followGuard;
 window.__wmTest.fol=o=>{if(o.nav){user.real=true;firstFix=true;RT.pts=[[148,-37.87],[148.01,-37.87]];RT.arrived=false}if("follow" in o)follow=o.follow;if("ago" in o)lastTouchAt=Date.now()-o.ago;followGuard();return [follow,zoomLock]};
 function noGPS(){
   if(user.real)return;
-  setStatus("NO GPS · SHOWING HOME STREET · TAP MAP TO MOVE YOU");
+  setStatus("NO GPS LOCK · WAITING AT THE NORTH POLE · TAP MAP TO MOVE YOU");
   if(!firstFix){firstFix=true;loadWeather()}
 }
 function startGPS(){
@@ -4559,8 +4559,8 @@ $("dbgCopy").onclick=async()=>{
 };
 $("dbgTest").onclick=async()=>{
   const b=$("dbgTest");b.textContent="Testing…";
-  const ll=(user&&user.lat!=null)?{lat:user.lat,lon:user.lon}:{lat:-37.8806,lon:147.9812};
-  const fl={lat:-37.8806,lon:147.9812},to2={lat:-37.8290,lon:147.6100};
+  const ll=(user&&user.lat!=null)?{lat:user.lat,lon:user.lon}:{lat:-37.8136,lon:144.9631};
+  const fl={lat:-37.8136,lon:144.9631},to2={lat:-38.1499,lon:144.3617};
   dbg("TEST","---- self-test start ----");
   const tryFetch=async(name,url)=>{
     const t0=Date.now();
@@ -4569,10 +4569,10 @@ $("dbgTest").onclick=async()=>{
     catch(e){dbg("TEST",name+": FAIL "+(e&&e.name)+": "+(e&&e.message)+" "+(Date.now()-t0)+"ms")}
   };
   const f=(a,c)=>"https://router.project-osrm.org/route/v1/driving/"+a.lon.toFixed(5)+","+a.lat.toFixed(5)+";"+c.lon.toFixed(5)+","+c.lat.toFixed(5)+"?overview=false";
-  await tryFetch("OSRM fixed Lakes Entrance->Bairnsdale",f(fl,to2));
+  await tryFetch("OSRM fixed Melbourne->Geelong",f(fl,to2));
   await tryFetch("OSRM from my position, 1 km north",f(ll,{lat:ll.lat+0.009,lon:ll.lon}));
   await tryFetch("OSRM server root","https://router.project-osrm.org/");
-  await tryFetch("Open-Meteo","https://api.open-meteo.com/v1/forecast?latitude=-37.88&longitude=147.98&current=temperature_2m");
+  await tryFetch("Open-Meteo","https://api.open-meteo.com/v1/forecast?latitude=-37.81&longitude=144.96&current=temperature_2m");
   if(TPL){
     const z=10,n=1<<z,x=Math.floor((ll.lon+180)/360*n),r=ll.lat*Math.PI/180,y=Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n);
     await tryFetch("Map tile z10",TPL.replace("{z}",z).replace("{x}",x).replace("{y}",y));
@@ -4820,31 +4820,19 @@ $("wxX").onclick=wxClose;
 $("wxRef").onclick=()=>{$("wxRef").textContent="…";loadWeather().finally(()=>{$("wxRef").textContent="Refresh"})};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("wx").hidden)wxClose()});
 
-/* ---------- home street + blank-map explanation ---------- */
+/* ---------- blank-map explanation + first-lock offline save ---------- */
 function emptyCheck(){                    // black map? say why instead of leaving it blank
   if(!map||map.isMoving()||map.getZoom()<11)return;
   let n=0;
   try{n=map.queryRenderedFeatures({layers:["road_main","road_secondary","road_tertiary","road_minor"]}).length}catch(e){return}
   if(n===0)setStatus(navigator.onLine===false?"OFFLINE · NO SAVED MAP HERE · TAP SAVE WHEN ONLINE":"NO ROADS IN VIEW · ZOOM OUT OR TAP LOCATE");
 }
-async function resolveHome(){             // look the home street up once, then remember it
-  if(ls.get("wm_home"))return true;
-  try{
-    const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=au&q="+encodeURIComponent(HOME_Q));
-    const j=await r.json();
-    if(j&&j[0]){
-      const la=+j[0].lat,lo=+j[0].lon;
-      if(Math.hypot((la-HOME.lat)*111,(lo-HOME.lon)*88)<15){   // sanity check: must be near Lakes Entrance
-        HOME={lat:la,lon:lo};ls.set("wm_home",JSON.stringify(HOME));
-        if(!user.real){
-          user={lat:la,lon:lo,real:false};marker.setLngLat([lo,la]);
-          if(!userMoved)map.jumpTo({center:[lo,la],zoom:15});
-          loadWeather();
-        }
-        return true;
-      }
-    }
-  }catch(e){}
+async function resolveHome(){             // the first real GPS lock becomes "home" for the one-off offline save (stored on this phone only)
+  if(HOME)return true;
+  for(let n=0;n<600;n++){                  // wait up to ~10 minutes for a lock
+    if(user&&user.real){HOME={lat:user.lat,lon:user.lon};ls.set("wm_home",JSON.stringify(HOME));return true}
+    await new Promise(r=>setTimeout(r,1000));
+  }
   return false;
 }
 async function worldPrefetch(){                 // one-off: the whole world at low zoom (a few MB) so zooming out works offline too
@@ -4862,8 +4850,8 @@ async function worldPrefetch(){                 // one-off: the whole world at l
   dbg("MAP","world prefetch "+(ok?"done":"incomplete"));
   if(ok)ls.set("wm_world","1");
 }
-async function autoHomePack(){            // one-off 10 km save around home so the paper map works with no signal
-  if(ls.get("wm_homepack")||!IDB.ok||!TPL||packing)return;
+async function autoHomePack(){            // one-off 10 km save around where you first got a lock so the paper map works with no signal
+  if(!HOME||ls.get("wm_homepack")||!IDB.ok||!TPL||packing)return;
   await startGate();if(packing)return;
   await packArea({auto:true,lat:HOME.lat,lon:HOME.lon,R:10});
 }
