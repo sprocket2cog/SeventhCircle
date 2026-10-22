@@ -346,7 +346,7 @@ button.ico svg{display:block;filter:drop-shadow(0 0 3px currentColor)}
 <ul>
 <li><b>SEARCH:</b> find roads and places, Clear highlight, Route via pins, To last pin, Sim drive, Routing (auto or offline only).</li>
 <li><b>PINS:</b> type a name, pick a map pin and press Save pin to list. Tap a saved pin, then Copy lat, long, Navigate (puts it on the map as the newest pin and routes to it) or Delete.</li>
-<li><b>ALERTS:</b> Bend warnings (pace and test), Grade alerts (level, unit, test), Speed limit (on/off, margin, test overspeed).</li>
+<li><b>ALERTS:</b> Bend warnings (pace and test), Grade alerts (level, unit, test), Speed limit (on/off, margin, test overspeed), Road hazards (speed bumps, traffic calming, level crossings, speed cameras, cattle grids: on/off and test). Each hazard type has its own sound.</li>
 <li><b>VIEW:</b> View (buildings, terrain, off), <b>Icon</b> (your arrow, coloured arrows, or a bike, car, SUV, ute, hiker, prospector or explorer: pick it on the sample route; Follow theme resets it), Map saved only or online + saved, Xenomorph (on/off, walk now).</li>
 <li><b>SOUND:</b> Voice, Tracker ping, Alerts and Turn directions each on or off. Speed, Corner and Hill each tone + voice, tone only, voice only or off. Then the voice list, test and voice speed.</li>
 <li><b>SAVE:</b> Save at arrow, Save route (with width), Save at pin, Save all pins.</li>
@@ -567,6 +567,7 @@ window.__manual=()=>{infoFromBoot=false;infoEl.hidden=false;infoEl.querySelector
       <div class="srow"><button id="qGradeT" class="mini" style="flex:1">Test grade alert</button></div>
       <div class="srow"><button id="qLim" class="mini" style="flex:1">Speed limit: on</button><button id="qLimTol" class="mini" style="flex:1">Margin: +3</button></div>
       <div class="srow"><button id="qLimT" class="mini" style="flex:1">Test overspeed alarm</button></div>
+      <div class="srow"><button id="qHz" class="mini" style="flex:1">Road hazards: on</button><button id="qHzT" class="mini" style="flex:1">Test hazard alerts</button></div>
       </div>
       <div class="stab" data-t="view" hidden>
       <div class="srow"><button id="qView" class="mini" style="flex:1">View: buildings</button></div>
@@ -579,7 +580,9 @@ window.__manual=()=>{infoFromBoot=false;infoEl.hidden=false;infoEl.querySelector
       <div class="srow"><button id="qSnA" class="mini" style="flex:1">Alerts: on</button><button id="qSnT" class="mini" style="flex:1">Turn directions: on</button></div>
       <div class="qh" style="padding:2px 4px">EACH ALERT: TONE + VOICE, TONE ONLY, VOICE ONLY OR OFF</div>
       <div class="srow"><button id="qSnSpd" class="mini" style="flex:1">Speed: tone + voice</button><button id="qSnCor" class="mini" style="flex:1">Corner: tone + voice</button></div>
-      <div class="srow"><button id="qSnHil" class="mini" style="flex:1">Hill: tone + voice</button></div>
+      <div class="srow"><button id="qSnHil" class="mini" style="flex:1">Hill: tone + voice</button><button id="qSnBmp" class="mini" style="flex:1">Bumps: tone + voice</button></div>
+      <div class="srow"><button id="qSnX" class="mini" style="flex:1">Crossing: tone + voice</button><button id="qSnCam" class="mini" style="flex:1">Camera: tone + voice</button></div>
+      <div class="srow"><button id="qSnHz" class="mini" style="flex:1">Other hazards: tone + voice</button></div>
       <div class="srow"><select id="voiceSel" aria-label="Voice"></select><button id="voiceTest" class="mini">Test voice</button></div>
       <div class="srow"><button id="qVrate" class="mini" style="flex:1">Voice speed: quick</button></div>
       </div>
@@ -762,6 +765,8 @@ function buildStyle(pi){
        paint:{"line-color":p.text,"line-opacity":.35,"line-blur":5,"line-width":W([[3,8],[12,12],[14,15],[18,30]])}},{"line-color":"text"});
   add({id:"rt_line",type:"line",source:"rt",layout:round,
        paint:{"line-color":p.accent,"line-width":W([[3,2.5],[12,4],[14,5],[18,12]])}},{"line-color":"accent"});
+  add({id:"haz_pt",type:"circle",source:"haz",minzoom:12,
+       paint:{"circle-radius":["interpolate",["linear"],["zoom"],12,2.5,16,6,19,10],"circle-color":["match",["get","t"],"x","#ff3b30","k","#ff2bd6",["g","h"],"#18e0ff","#ffb000"],"circle-stroke-color":p.bg,"circle-stroke-width":1.5}});
   const NONE=["any",["==",["get","name"],"\u0001none"],["==",["get","name:latin"],"\u0001none"]];
   const hid=Object.assign({visibility:"none"},round);   // hidden (and no extra tile loading) until a road is picked
   add({id:"hl_glow",type:"line",source:"omh","source-layer":"transportation_name",layout:hid,filter:NONE,
@@ -825,6 +830,7 @@ function buildStyle(pi){
              hl:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
              hlb:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
              rt:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
+             haz:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
              trail:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
              contours:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
              dem:{type:"raster-dem",tiles:["wmd://{z}/{x}/{y}"],tileSize:256,encoding:"terrarium",minzoom:0,maxzoom:12}},
@@ -854,7 +860,7 @@ let lastErr="",errCount=0;const errLog=[];
 const statusEl=$("status"),legend=$("legend"),tick=$("tickInner");
 document.addEventListener("contextmenu",e=>{if(!/^(TEXTAREA|INPUT)$/.test(e.target.tagName))e.preventDefault()},true);
 document.addEventListener("selectstart",e=>{if(!/^(TEXTAREA|INPUT)$/.test((e.target.tagName||(e.target.parentNode&&e.target.parentNode.tagName)||"")))e.preventDefault()},true);
-const BUILD="2026-10-19 icons4";
+const BUILD="2026-10-22 hazards1";
 window.__wmTest={};
 const DBG=[],DBGN={t:0,last:""};
 function dbg(tag,msg){const d=new Date();DBG.push(d.toTimeString().slice(0,8)+" "+tag+" "+msg);if(DBG.length>500)DBG.shift()}
@@ -1727,6 +1733,162 @@ $("qLim").onclick=()=>{LIM.on=!LIM.on;ls.set("wm_lim",LIM.on?"1":"0");limUI();se
 $("qLimTol").onclick=()=>{const i=(LIMTOL.indexOf(LIM.tol)+1)%LIMTOL.length;LIM.tol=LIMTOL[i];ls.set("wm_limtol",String(LIM.tol));limUI();setStatus("OVERSPEED MARGIN: +"+LIM.tol+" "+uTxt().toUpperCase())};
 $("qLimT").onclick=()=>{audioUnlock();closeSearch();limAlarm(true)};
 limUI();window.__LIM=LIM;
+/* ---------- road hazards: speed bumps, traffic calming, level crossings, speed cameras, cattle grids (OpenStreetMap points) ---------- */
+const HZ={on:ls.get("wm_hz")!=="0",tiles:new Map(),busy:new Set(),failUntil:new Map(),done:new Set(),last:{},info:"starting",lastFetch:"none",n:0};
+const HZG={b:"bump",r:"bump",c:"bump",m:"bump",x:"cross",k:"cam",g:"haz",h:"haz"};
+const HZN={b:"Speed bump",r:"Rumble strips",c:"Traffic calming",m:"Mini roundabout",x:"Level crossing",k:"Speed camera",g:"Cattle grid",h:"Hazard"};
+function hzKind(t){
+  if(t.railway==="level_crossing"||t.railway==="tram_level_crossing"){
+    const prot=t["crossing:barrier"]==="yes"||t.crossing==="barrier"||t["crossing:light"]==="yes"||t.crossing==="traffic_signals"||t["crossing:bell"]==="yes"&&t["crossing:barrier"]!=="no";
+    return["x",prot?"1":"0"];
+  }
+  if(t.highway==="speed_camera"||t.enforcement){
+    const e=t.enforcement||"",s=e==="traffic_signals"?"r":e==="average_speed"?"a":"s";return["k",s];
+  }
+  if(t.traffic_calming){
+    const c=t.traffic_calming;
+    if(/rumble/.test(c))return["r",""];
+    if(/^(bump|hump|table|cushion|dip|yes|raised_crossing|raised|speed_table)/.test(c)||/bump|hump|table|cushion/.test(c))return["b",c.split(";")[0].slice(0,12)];
+    return["c",c.split(";")[0].slice(0,14)];
+  }
+  if(t.barrier==="cattle_grid")return["g",""];
+  if(t.highway==="mini_roundabout")return["m",""];
+  if(t.hazard)return["h",String(t.hazard).split(";")[0].replace(/_/g," ").slice(0,24)];
+  return null;
+}
+async function hzFetch(x,y){
+  const b=limBox(LIMZ,x,y),bb=[b.s,b.w,b.n,b.e].map(v=>v.toFixed(5)).join(",");
+  const q='[out:json][timeout:25];(node["traffic_calming"]('+bb+');node["railway"~"^(level_crossing|tram_level_crossing)$"]('+bb+');node["highway"="speed_camera"]('+bb+');node["enforcement"~"^(maxspeed|average_speed|traffic_signals|speed_camera)"]('+bb+');node["barrier"="cattle_grid"]('+bb+');node["highway"="mini_roundabout"]('+bb+');node["hazard"]('+bb+'););out body qt;';
+  let last="";
+  for(const u of LIMURLS){
+    try{
+      const c=new AbortController(),to=setTimeout(()=>c.abort(),22000);
+      const r=await fetch(u,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:c.signal});clearTimeout(to);
+      if(!r.ok){last="HTTP "+r.status;continue}
+      const j=await r.json(),out=[],seen=new Set();
+      for(const e of (j.elements||[])){
+        if(e.type!=="node"||e.lat==null||seen.has(e.id))continue;seen.add(e.id);
+        const k=hzKind(e.tags||{});if(!k)continue;
+        out.push([Math.round(e.lat*1e5),Math.round(e.lon*1e5),k[0],k[1]]);
+      }
+      return out;
+    }catch(e){last=String(e.message||e).slice(0,40)}
+  }
+  throw new Error(last||"failed");
+}
+function hzKeep(key,a){
+  HZ.tiles.set(key,a.map(h=>({la:h[0]/1e5,lo:h[1]/1e5,t:h[2],s:h[3]||"",id:h[2]+h[0]+"/"+h[1]})));
+  if(HZ.tiles.size>12)HZ.tiles.delete(HZ.tiles.keys().next().value);
+  hzDraw();
+}
+async function hzLoad(x,y,net){
+  const key="hz/"+LIMZ+"/"+x+"/"+y;
+  if(HZ.tiles.has(key))return true;
+  const hit=await IDB.get(key);
+  if(hit&&hit.h){hzKeep(key,hit.h);return true}
+  if(!net||navigator.onLine===false||HZ.busy.has(key)||Date.now()<(HZ.failUntil.get(key)||0))return false;
+  HZ.busy.add(key);HZ.info="downloading hazards…";
+  try{
+    const a=await hzFetch(x,y);
+    hzKeep(key,a);IDB.put(key,{t:Date.now(),h:a});
+    HZ.lastFetch="OK "+a.length+" points "+new Date().toLocaleTimeString();dbg("HAZ","block "+x+"/"+y+" "+a.length+" points");
+    return true;
+  }catch(e){HZ.failUntil.set(key,Date.now()+60000);HZ.lastFetch="FAILED "+String(e.message||e).slice(0,30);return false}
+  finally{HZ.busy.delete(key)}
+}
+async function hzSaveArea(jobs){                                  // hazards for every block of a map save, so they work with no signal
+  const seen=new Set(),ts=[];
+  for(const j of jobs)if(j[0]===LIMZ){const k=j[1]+"/"+j[2];if(!seen.has(k)){seen.add(k);ts.push([j[1],j[2]])}}
+  if(!ts.length||ts.length>150)return;
+  let n=0,fail=0;
+  for(const [x,y] of ts){
+    if(packCancel)break;n++;
+    if(await IDB.has("hz/"+LIMZ+"/"+x+"/"+y))continue;
+    setStatus("SAVING ROAD HAZARDS "+n+"/"+ts.length+(fail?" · "+fail+" FAILED":""));
+    try{const a=await hzFetch(x,y);await IDB.put("hz/"+LIMZ+"/"+x+"/"+y,{t:Date.now(),h:a})}catch(e){fail++}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  dbg("HAZ","saved hazards for "+ts.length+" blocks, "+fail+" failed");
+}
+function hzDraw(){
+  if(!map)return;
+  const f=[];for(const t of HZ.tiles.values())for(const h of t)f.push({type:"Feature",properties:{t:h.t},geometry:{type:"Point",coordinates:[h.lo,h.la]}});
+  try{map.getSource("haz").setData({type:"FeatureCollection",features:HZ.on?f:[]})}catch(e){}
+}
+function hzTone(seq,type,gain){                                  // seq: [[hz,start s,dur s]...]
+  audioUnlock();if(!audio||audio.state!=="running")return 0;
+  const t0=audio.currentTime+.02;let end=0;
+  for(const [hz,st,d,hz2] of seq){
+    const t=t0+st,o=audio.createOscillator(),g=audio.createGain();
+    o.type=type;o.frequency.setValueAtTime(hz,t);if(hz2)o.frequency.exponentialRampToValueAtTime(hz2,t+d);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+d+.02);end=Math.max(end,st+d);
+  }
+  return Math.round(end*1000)+80;
+}
+const HZCH={
+  bump:()=>hzTone([[190,0,.16,110],[190,.2,.16,110]],"triangle",.6),                       // two low thumps
+  cross:()=>hzTone([[880,0,.1],[660,.14,.1],[880,.28,.1],[660,.42,.1],[880,.56,.1],[660,.7,.1]],"square",.26),   // bell-like ding-dong x3
+  cam:()=>hzTone([[1000,0,.14,2200],[1000,.2,.14,2200]],"sine",.5),                         // radar chirps
+  haz:()=>hzTone([[600,0,.14],[450,.18,.22]],"triangle",.4)                                 // falling pair
+};
+function hzWarn(h,v){const f={x:9,k:9,g:6,h:6,b:5,r:5,c:5,m:5}[h.t],lo={x:120,k:150}[h.t]||60,hi={x:350,k:400}[h.t]||200;return Math.max(lo,Math.min(hi,v*f))}
+function hzText(h){
+  let t=HZN[h.t];
+  if(h.t==="x")t=h.s==="1"?"Level crossing ahead":"Level crossing ahead, no barriers";
+  else if(h.t==="k"){t=(h.s==="r"?"Red light camera":h.s==="a"?"Average speed camera":"Speed camera")+" ahead";if(LIM.cur>0)t+=", limit "+limDisp(LIM.cur)}
+  else if(h.t==="h")t="Caution, "+(h.s||"hazard")+" ahead";
+  else if(h.t==="b")t=/table|cushion/.test(h.s)?"Speed "+(/cushion/.test(h.s)?"cushion":"table")+" ahead":"Speed bump ahead";
+  else if(h.t==="c")t="Traffic calming ahead";
+  else if(h.t==="r")t="Rumble strips ahead";
+  else if(h.t==="m")t="Mini roundabout ahead";
+  else if(h.t==="g")t="Cattle grid ahead";
+  return t;
+}
+function hzAlert(h,along,force){
+  const g=HZG[h.t],t=hzText(h);
+  setStatus(t.toUpperCase()+(along?" · "+fmtDist(along).toUpperCase():""));HZ.last[g]=Date.now();HZ.lastTxt=t;
+  const c=force?{tone:true,voice:true}:chan(g);
+  if(c.voice)say(t,true,g==="cross"?5:3,null,c.tone?HZCH[g]:null,g);
+  else if(c.tone)HZCH[g]();
+  dbg("HAZ",t+" "+Math.round(along)+" m");
+}
+function hzTick(){
+  if(!HZ.on){HZ.info="off";return}
+  const f=lastFix;if(!f||!user||!user.real||Date.now()-f.at>8000){HZ.info="waiting for GPS";return}
+  const v=f.v==null?0:f.v,[x,y]=limXY(user.lat,user.lon,LIMZ);
+  hzLoad(x,y,true).then(ok=>{
+    if(!ok)return;const b=limBox(LIMZ,x,y),mx=.006,my=.005;
+    if(user.lon-b.w<mx)hzLoad(x-1,y,true);if(b.e-user.lon<mx)hzLoad(x+1,y,true);if(b.n-user.lat<my)hzLoad(x,y-1,true);if(user.lat-b.s<my)hzLoad(x,y+1,true);
+  });
+  if(v<3){HZ.info="not moving";return}
+  const step=10,P=pathAhead(450,step);if(!P||P.length<2){HZ.info="no heading yet";return}
+  const kx=111320*Math.cos(user.lat*Math.PI/180),ky=110574;
+  let la0=1e9,la1=-1e9,lo0=1e9,lo1=-1e9;for(const p of P){if(p[0]<la0)la0=p[0];if(p[0]>la1)la1=p[0];if(p[1]<lo0)lo0=p[1];if(p[1]>lo1)lo1=p[1]}
+  const pad=.0003,found=[];
+  for(const t of HZ.tiles.values())for(const h of t){
+    if(h.la<la0-pad||h.la>la1+pad||h.lo<lo0-pad||h.lo>lo1+pad)continue;
+    let bi=-1;for(let i=0;i<P.length;i++){if(Math.hypot((h.lo-P[i][1])*kx,(h.la-P[i][0])*ky)<=22){bi=i;break}}
+    if(bi>=1)found.push({h:h,along:bi*step});
+  }
+  found.sort((a,b)=>a.along-b.along);
+  HZ.n=found.length;HZ.info=found.length?HZN[found[0].h.t].toLowerCase()+" in "+found[0].along+" m ("+found.length+" ahead)":"clear ahead";
+  for(const q of found){
+    const h=q.h;if(HZ.done.has(h.id))continue;
+    if(q.along>hzWarn(h,v))continue;
+    HZ.done.add(h.id);if(HZ.done.size>600)HZ.done.delete(HZ.done.values().next().value);
+    const g=HZG[h.t];
+    if(g==="bump"&&Date.now()-(HZ.last.bump||0)<7000)continue;      // a run of bumps gets one warning
+    if(Date.now()-Math.max(...Object.values(HZ.last).concat([0]))<2500)continue;
+    hzAlert(h,q.along);return;
+  }
+}
+setInterval(()=>{try{hzTick()}catch(e){HZ.info="error "+String(e&&e.message||e).slice(0,40)}},1000);
+function hzUI(){$("qHz").textContent="Road hazards: "+(HZ.on?"on":"off");hzDraw()}
+$("qHz").onclick=()=>{HZ.on=!HZ.on;ls.set("wm_hz",HZ.on?"1":"0");HZ.done.clear();hzUI();setStatus("ROAD HAZARDS: "+(HZ.on?"ON":"OFF"))};
+let hzTi=0;
+$("qHzT").onclick=()=>{audioUnlock();closeSearch();const T=[{t:"b",s:"bump"},{t:"x",s:"0"},{t:"k",s:"s"},{t:"g",s:""},{t:"c",s:"chicane"}];hzAlert(T[hzTi++%T.length],200,true)};
+hzUI();window.__HZ=HZ;window.__hzx={kind:hzKind,text:hzText,warn:hzWarn,sim:o=>{user={lat:o.lat,lon:o.lon,real:true};lastFix={lat:o.lat,lon:o.lon,ts:Date.now(),at:Date.now(),v:o.v,acc:4};hdgGps=o.h;compassOn=false;HZ.done.clear();HZ.last={};HZ.tiles.set('t',o.hz.map(h=>({la:h[0],lo:h[1],t:h[2],s:h[3],id:h[2]+h[0]})));hzTick();return HZ.info+' | '+(HZ.lastTxt||'')}};
 function savedUI(){$("qSaved").textContent=SAVEDONLY?"Map: saved only":"Map: online + saved";$("soTag").classList.toggle("on",SAVEDONLY)}
 $("qSaved").onclick=()=>{
   SAVEDONLY=!SAVEDONLY;ls.set("wm_savedonly",SAVEDONLY?"1":"0");savedUI();TCACHE.clear();try{SYN.clear()}catch(e){}
@@ -1951,7 +2113,7 @@ function initMap(){
   map.on("moveend",()=>vfSchedule(1200));
   setTimeout(()=>vfSchedule(500),6000);
   window.addEventListener("online",()=>{vfFail=0;vfSchedule(2000)});
-  map.on("style.load",()=>{applyNames(namesOn);pinDraw();b3Add();rtDraw();applyViewMode()});
+  map.on("style.load",()=>{applyNames(namesOn);pinDraw();b3Add();rtDraw();applyViewMode();try{hzDraw()}catch(e){}});
   map.on("moveend",()=>{if(vmode==="ter")ctSchedule(600)});
   map.on("sourcedata",e=>{if(e&&e.sourceId==="om")B3.dirty=true});
   map.on("moveend",()=>{B3.dirty=true});
@@ -2394,6 +2556,7 @@ async function packArea(o){                         // o: {auto,lat,lon,R} | {at
     await Promise.all([dw(),dw(),dw(),dw()]);
   }
   if(!packCancel)await limSaveArea(jobs);
+  if(!packCancel)await hzSaveArea(jobs);
   show();
   const stopped=packCancel;
   packing=false;packCancel=false;btn.textContent="Save";btn.classList.remove("on");
@@ -3228,12 +3391,12 @@ setInterval(wxCheck,30000);   // watchdog: WebViews throttle long timers, so pol
 
 /* ---------- proximity beep (motion-tracker style) ---------- */
 /* sound settings: the speaker button on the main screen only mutes and unmutes; WHAT is heard is chosen in the Sound tab */
-const SN={voice:ls.get("wm_sv")!=="0",ping:ls.get("wm_sp")!=="0",alerts:ls.get("wm_sa")!=="0",turn:ls.get("wm_st")!=="0",muted:false,m:{speed:3,corner:3,hill:3}};   // m: 0 off, 1 tone, 2 voice, 3 both
+const SN={voice:ls.get("wm_sv")!=="0",ping:ls.get("wm_sp")!=="0",alerts:ls.get("wm_sa")!=="0",turn:ls.get("wm_st")!=="0",muted:false,m:{speed:3,corner:3,hill:3,bump:3,cross:3,cam:3,haz:3}};   // m: 0 off, 1 tone, 2 voice, 3 both
 (function(){
   const old=ls.get("wm_snd");
   SN.muted=ls.get("wm_smute")!=null?ls.get("wm_smute")==="1":(old==="0"||(old==null&&ls.get("wm_mute")==="1"));
   if(ls.get("wm_sv")==null&&old==="1")SN.voice=false;                  // the old "beep only" setting
-  for(const k of ["speed","corner","hill"]){const v=ls.get("wm_sm_"+k);if(v!=null&&+v>=0&&+v<=3)SN.m[k]=+v}
+  for(const k of ["speed","corner","hill","bump","cross","cam","haz"]){const v=ls.get("wm_sm_"+k);if(v!=null&&+v>=0&&+v<=3)SN.m[k]=+v}
 })();
 function saveSN(){ls.set("wm_sv",SN.voice?"1":"0");ls.set("wm_sp",SN.ping?"1":"0");ls.set("wm_sa",SN.alerts?"1":"0");ls.set("wm_st",SN.turn?"1":"0");ls.set("wm_smute",SN.muted?"1":"0");ls.set("wm_mute",SN.muted?"1":"0");
   for(const k in SN.m)ls.set("wm_sm_"+k,String(SN.m[k]))}
@@ -3354,12 +3517,13 @@ function sndTabUI(){
   $("qSnV").textContent="Voice: "+o(SN.voice);$("qSnP").textContent="Tracker ping: "+o(SN.ping);
   $("qSnA").textContent="Alerts: "+o(SN.alerts);$("qSnT").textContent="Turn directions: "+o(SN.turn);
   $("qSnSpd").textContent="Speed: "+SMODE[SN.m.speed];$("qSnCor").textContent="Corner: "+SMODE[SN.m.corner];$("qSnHil").textContent="Hill: "+SMODE[SN.m.hill];
-  for(const id of ["qSnSpd","qSnCor","qSnHil"])$(id).style.opacity=SN.alerts?"":".45";
+  $("qSnBmp").textContent="Bumps: "+SMODE[SN.m.bump];$("qSnX").textContent="Crossing: "+SMODE[SN.m.cross];$("qSnCam").textContent="Camera: "+SMODE[SN.m.cam];$("qSnHz").textContent="Other hazards: "+SMODE[SN.m.haz];
+  for(const id of ["qSnSpd","qSnCor","qSnHil","qSnBmp","qSnX","qSnCam","qSnHz"])$(id).style.opacity=SN.alerts?"":".45";
   sndUI();
 }
 const snTog=(id,key,label)=>{$(id).onclick=()=>{SN[key]=!SN[key];saveSN();sndTabUI();setStatus(label+": "+(SN[key]?"ON":"OFF"));if(key==="voice"&&!SN.voice){try{synth&&synth.cancel()}catch(e){}}if(key==="ping"&&SN.ping&&!SN.muted){audioUnlock();setTimeout(()=>beep(.14),60)}}};
 snTog("qSnV","voice","VOICE");snTog("qSnP","ping","TRACKER PING");snTog("qSnA","alerts","ALERTS");snTog("qSnT","turn","TURN DIRECTIONS");
-for(const [id,k,l] of [["qSnSpd","speed","SPEED"],["qSnCor","corner","CORNER"],["qSnHil","hill","HILL"]])
+for(const [id,k,l] of [["qSnSpd","speed","SPEED"],["qSnCor","corner","CORNER"],["qSnHil","hill","HILL"],["qSnBmp","bump","BUMP"],["qSnX","cross","CROSSING"],["qSnCam","cam","CAMERA"],["qSnHz","haz","HAZARD"]])
   $(id).onclick=()=>{SN.m[k]=SORDER[(SORDER.indexOf(SN.m[k])+1)%4];saveSN();sndTabUI();setStatus(l+" ALERT: "+SMODE[SN.m[k]].toUpperCase())};
 sndTabUI();
 
